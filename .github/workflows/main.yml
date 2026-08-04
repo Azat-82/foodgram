@@ -40,8 +40,10 @@ jobs:
           username: ${{ secrets.USER }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            mkdir -p foodgram
-            cd foodgram
+            mkdir -p /home/ubuntu/frontend
+            mkdir -p /home/ubuntu/foodgram
+            
+            cd /home/ubuntu/foodgram
             
             sudo docker compose down
             
