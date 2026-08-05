@@ -22,7 +22,9 @@ class RecipeIngredientReadSerializer(serializers.ModelSerializer):
     """Сериализатор для чтения ингредиентов внутри рецепта."""
     id = serializers.ReadOnlyField(source='ingredient.id')
     name = serializers.ReadOnlyField(source='ingredient.name')
-    measurement_unit = serializers.ReadOnlyField(source='ingredient.measurement_unit')
+    measurement_unit = serializers.ReadOnlyField(
+        source='ingredient.measurement_unit'
+    )
 
     class Meta:
         model = RecipeIngredient
@@ -43,14 +45,27 @@ class RecipeReadSerializer(serializers.ModelSerializer):
     """Сериализатор для безопасного отображения рецептов (GET)."""
     tags = TagSerializer(many=True, read_only=True)
     author = CustomUserSerializer(read_only=True)
-    ingredients = RecipeIngredientReadSerializer(many=True, source='recipe_ingredients')
+    ingredients = RecipeIngredientReadSerializer(
+        many=True,
+        source='recipe_ingredients'
+    )
     is_favorited = serializers.SerializerMethodField()
     is_in_shopping_cart = serializers.SerializerMethodField()
 
     class Meta:
         model = Recipe
-        fields = ('id', 'tags', 'author', 'ingredients', 'is_favorited',
-                  'is_in_shopping_cart', 'name', 'image', 'text', 'cooking_time')
+        fields = (
+            'id',
+            'tags',
+            'author',
+            'ingredients',
+            'is_favorited',
+            'is_in_shopping_cart',
+            'name',
+            'image',
+            'text',
+            'cooking_time',
+        )
 
     def get_is_favorited(self, obj):
         request = self.context.get('request')
@@ -67,13 +82,23 @@ class RecipeReadSerializer(serializers.ModelSerializer):
 
 class RecipeWriteSerializer(serializers.ModelSerializer):
     """Сериализатор для создания и обновления рецептов (POST, PATCH)."""
-    tags = serializers.PrimaryKeyRelatedField(queryset=Tag.objects.all(), many=True)
+    tags = serializers.PrimaryKeyRelatedField(
+        queryset=Tag.objects.all(),
+        many=True,
+    )
     ingredients = RecipeIngredientWriteSerializer(many=True)
     image = Base64ImageField()
 
     class Meta:
         model = Recipe
-        fields = ('ingredients', 'tags', 'image', 'name', 'text', 'cooking_time')
+        fields = (
+            'ingredients',
+            'tags',
+            'image',
+            'name',
+            'text',
+            'cooking_time',
+        )
 
     def _save_ingredients(self, recipe, ingredients_data):
         """Вспомогательный метод для сохранения ингредиентов."""
@@ -109,6 +134,5 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         return instance
 
     def to_representation(self, instance):
-        """Переопределяем ответ, чтобы после записи возвращался сериализатор чтения."""
         context = {'request': self.context.get('request')}
         return RecipeReadSerializer(instance, context=context).data
