@@ -4,7 +4,7 @@ from django.db import models
 
 class User(AbstractUser):
     """Кастомная модель пользователя для проекта Foodgram."""
-    
+
     email = models.EmailField(
         'Адрес электронной почты',
         max_length=254,

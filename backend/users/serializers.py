@@ -5,10 +5,17 @@ from .models import User, Subscription
 
 class CustomUserCreateSerializer(UserCreateSerializer):
     """Сериализатор для регистрации пользователей (все поля обязательны)."""
-    
+
     class Meta:
         model = User
-        fields = ('email', 'id', 'username', 'first_name', 'last_name', 'password')
+        fields = (
+            'email',
+            'id',
+            'username',
+            'first_name',
+            'last_name',
+            'password',
+        )
         extra_kwargs = {
             'first_name': {'required': True},
             'last_name': {'required': True},
@@ -22,10 +29,21 @@ class CustomUserSerializer(UserSerializer):
 
     class Meta:
         model = User
-        fields = ('email', 'id', 'username', 'first_name', 'last_name', 'is_subscribed', 'avatar')
+        fields = (
+            'email',
+            'id',
+            'username',
+            'first_name',
+            'last_name',
+            'is_subscribed',
+            'avatar',
+        )
 
     def get_is_subscribed(self, obj):
         request = self.context.get('request')
         if not request or request.user.is_anonymous:
             return False
-        return Subscription.objects.filter(user=request.user, author=obj).exists()
+        return Subscription.objects.filter(
+            user=request.user,
+            author=obj,
+        ).exists()

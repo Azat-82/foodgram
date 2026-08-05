@@ -12,7 +12,9 @@ class Command(BaseCommand):
         file_path = '/app/ingredients.json'
 
         if not os.path.exists(file_path):
-            self.stdout.write(self.style.ERROR(f'Файл не найден по пути: {file_path}'))
+            self.stdout.write(
+                self.style.ERROR(f'Файл не найден по пути: {file_path}')
+            )
             return
 
         with open(file_path, 'r', encoding='utf-8') as f:
@@ -27,6 +29,11 @@ class Command(BaseCommand):
                 )
             )
 
-        Ingredient.objects.bulk_create(ingredients_to_create, ignore_conflicts=True)
+        Ingredient.objects.bulk_create(
+            ingredients_to_create,
+            ignore_conflicts=True
+        )
 
-        self.stdout.write(self.style.SUCCESS('Ингредиенты успешно загружены в базу данных!'))
+        self.stdout.write(
+            self.style.SUCCESS('Ингредиенты успешно загружены в базу данных!')
+        )
