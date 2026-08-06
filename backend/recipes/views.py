@@ -43,13 +43,25 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     search_fields = ('^name',)
 
 
+class RecipeFilter(django_filters.FilterSet):
+    tags = django_filters.ModelMultipleChoiceFilter(
+        field_name='tags__slug',
+        to_field_name='slug',
+        queryset=Tag.objects.all()
+    )
+
+    class Meta:
+        model = Recipe
+        fields = ('author', 'tags')
+
+
 class RecipeViewSet(viewsets.ModelViewSet):
     """Вьюсет для работы с рецептами (создание, чтение, обновление)."""
     queryset = Recipe.objects.all()
     permission_classes = (IsAuthenticatedOrReadOnly,)
     pagination_class = CustomPagination
     filter_backends = (DjangoFilterBackend,)
-    filterset_fields = ('author', 'tags')
+    filterset_class = RecipeFilter
 
     def get_serializer_class(self):
         if self.action in ('list', 'retrieve'):

@@ -16,23 +16,21 @@ class Command(BaseCommand):
             )
             return
 
-        with open(file_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
+        with open(file_path, 'r', encoding='utf-8') as ingredients_file:
+            data = json.load(ingredients_file)
 
-        ingredients_to_create = []
-        for item in data:
-            ingredients_to_create.append(
-                Ingredient(
-                    name=item['name'],
-                    measurement_unit=item['measurement_unit']
-                )
+        ingredients_to_create = [
+            Ingredient(
+                name=item['name'],
+                measurement_unit=item['measurement_unit']
             )
+            for item in data
+        ]
 
-        Ingredient.objects.bulk_create(
-            ingredients_to_create,
-            ignore_conflicts=True
-        )
+        Ingredient.objects.bulk_create(ingredients_to_create)
 
         self.stdout.write(
-            self.style.SUCCESS('Ингредиенты успешно загружены в базу данных!')
+            self.style.SUCCESS(
+                f'Успешно загружено {len(ingredients_to_create)} ингредиентов.'
+            )
         )

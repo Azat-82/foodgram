@@ -7,6 +7,7 @@ User = get_user_model()
 
 class Tag(models.Model):
     """Модель тега."""
+
     name = models.CharField('Название', max_length=200, unique=True)
     slug = models.SlugField('Уникальный слаг', max_length=200, unique=True)
 
@@ -20,6 +21,7 @@ class Tag(models.Model):
 
 class Ingredient(models.Model):
     """Модель ингредиента."""
+
     name = models.CharField('Название', max_length=200)
     measurement_unit = models.CharField('Единица измерения', max_length=200)
 
@@ -34,6 +36,7 @@ class Ingredient(models.Model):
 
 class Recipe(models.Model):
     """Модель рецепта."""
+
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -73,15 +76,18 @@ class Recipe(models.Model):
 
 class RecipeIngredient(models.Model):
     """Промежуточная модель для связи Рецепта и Ингредиента (с количеством)."""
+
     recipe = models.ForeignKey(
         Recipe,
         on_delete=models.CASCADE,
-        related_name='recipe_ingredients'
+        related_name='recipe_ingredients',
+        verbose_name='Рецепт'
     )
     ingredient = models.ForeignKey(
         Ingredient,
         on_delete=models.CASCADE,
-        related_name='recipe_ingredients'
+        related_name='ingredient_recipes',
+        verbose_name='Ингредиент'
     )
     amount = models.PositiveSmallIntegerField(
         'Количество',
@@ -100,6 +106,7 @@ class RecipeIngredient(models.Model):
 
 class Favorite(models.Model):
     """Модель для добавления рецептов в избранное."""
+
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -129,6 +136,7 @@ class Favorite(models.Model):
 
 class ShoppingCart(models.Model):
     """Модель для добавления рецептов в список покупок."""
+
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
