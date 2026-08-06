@@ -12,6 +12,7 @@ from .models import (
 )
 
 from django_filters.rest_framework import DjangoFilterBackend
+import django_filters
 from rest_framework import viewsets, filters
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 
