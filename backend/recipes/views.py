@@ -78,7 +78,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=(IsAuthenticated,),
     )
     def favorite(self, request, pk=None):
-        recipe = get_object_or_404(Recipe, id=pk)
+        recipe = self.get_object()
         user = request.user
 
         if request.method == 'POST':
@@ -91,12 +91,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         if request.method == 'DELETE':
-            obj = user.favorites.filter(recipe=recipe)
+            obj = user.favorite_recipes.filter(recipe=recipe)
             if not obj.exists():
-                return Response(
-                    {'errors': 'Рецепта не было в избранном.'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+                raise serializers.ValidationError('Рецепта не было в избранном.')
             obj.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -106,7 +103,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=(IsAuthenticated,),
     )
     def shopping_cart(self, request, pk=None):
-        recipe = get_object_or_404(Recipe, id=pk)
+        recipe = self.get_object()
         user = request.user
 
         if request.method == 'POST':
@@ -119,12 +116,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         if request.method == 'DELETE':
-            obj = user.shopping_carts.filter(recipe=recipe)
+            obj = user.shopping_cart_recipes.filter(recipe=recipe)
             if not obj.exists():
-                return Response(
-                    {'errors': 'Рецепта не было в списке покупок.'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+                raise serializers.ValidationError('Рецепта не было в списке покупок.')
             obj.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
 
