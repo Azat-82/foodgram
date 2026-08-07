@@ -154,3 +154,48 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         context = {'request': self.context.get('request')}
         return RecipeReadSerializer(instance, context=context).data
+
+class FavoriteSerializer(serializers.ModelSerializer):
+    """Сериализатор для добавления рецептов в избранное."""
+
+    class Meta:
+        model = Favorite
+        fields = ('user', 'recipe')
+
+    def validate(self, data):
+        user = data['user']
+        recipe = data['recipe']
+        if user.favorites.filter(recipe=recipe).exists():
+            raise serializers.ValidationError('Рецепт уже добавлен в избранное.')
+        return data
+
+    def to_representation(self, instance):
+        return {
+            'id': instance.recipe.id,
+            'name': instance.recipe.name,
+            'image': instance.recipe.image.url if instance.recipe.image else None,
+            'cooking_time': instance.recipe.cooking_time,
+        }
+
+
+class ShoppingCartSerializer(serializers.ModelSerializer):
+    """Сериализатор для добавления рецептов в список покупок."""
+
+    class Meta:
+        model = ShoppingCart
+        fields = ('user', 'recipe')
+
+    def validate(self, data):
+        user = data['user']
+        recipe = data['recipe']
+        if user.shopping_carts.filter(recipe=recipe).exists():
+            raise serializers.ValidationError('Рецепт уже в списке покупок.')
+        return data
+
+    def to_representation(self, instance):
+        return {
+            'id': instance.recipe.id,
+            'name': instance.recipe.name,
+            'image': instance.recipe.image.url if instance.recipe.image else None,
+            'cooking_time': instance.recipe.cooking_time,
+        }
