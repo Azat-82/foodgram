@@ -16,7 +16,7 @@ import django_filters
 from rest_framework import viewsets, filters
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 
-from .pagination import CustomPagination
+from .pagination import LimitPageNumberPagination
 from .serializers import (TagSerializer, IngredientSerializer,
                           RecipeReadSerializer, RecipeWriteSerializer)
 
@@ -60,7 +60,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     """Вьюсет для работы с рецептами (создание, чтение, обновление)."""
     queryset = Recipe.objects.all()
     permission_classes = (IsAuthenticatedOrReadOnly,)
-    pagination_class = CustomPagination
+    pagination_class = LimitPageNumberPagination
     filter_backends = (DjangoFilterBackend,)
     filterset_class = RecipeFilter
 
