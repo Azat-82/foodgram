@@ -1,20 +1,17 @@
 from django.db.models import Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
-from rest_framework import status
+from django_filters.rest_framework import DjangoFilterBackend
+import django_filters
+from rest_framework import status, filters, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 
 from .models import (
     Tag, Ingredient, Recipe,
     Favorite, ShoppingCart, RecipeIngredient
 )
-
-from django_filters.rest_framework import DjangoFilterBackend
-import django_filters
-from rest_framework import viewsets, filters
-from rest_framework.permissions import IsAuthenticatedOrReadOnly
 
 from .pagination import LimitPageNumberPagination
 from .serializers import (TagSerializer, IngredientSerializer,
@@ -23,6 +20,7 @@ from .serializers import (TagSerializer, IngredientSerializer,
 
 class IngredientSearchFilter(filters.SearchFilter):
     """Кастомный фильтр для поиска ингредиентов с начала строки."""
+
     search_param = 'name'
 
 
@@ -58,6 +56,7 @@ class RecipeFilter(django_filters.FilterSet):
 
 class RecipeViewSet(viewsets.ModelViewSet):
     """Вьюсет для работы с рецептами (создание, чтение, обновление)."""
+
     queryset = Recipe.objects.all()
     permission_classes = (IsAuthenticatedOrReadOnly,)
     pagination_class = LimitPageNumberPagination
@@ -74,11 +73,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     @action(
         detail=True,
-        methods=['post', 'delete'],
+        methods=('post', 'delete'),
         permission_classes=[IsAuthenticated],
     )
+
     def favorite(self, request, pk=None):
-        """Добавление и удаление рецепта из избранного."""
         recipe = get_object_or_404(Recipe, id=pk)
         user = request.user
 
@@ -111,11 +110,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     @action(
         detail=True,
-        methods=['post', 'delete'],
+        methods=('post', 'delete'),
         permission_classes=[IsAuthenticated],
     )
+
     def shopping_cart(self, request, pk=None):
-        """Добавление и удаление рецепта из списка покупок."""
         recipe = get_object_or_404(Recipe, id=pk)
         user = request.user
 
