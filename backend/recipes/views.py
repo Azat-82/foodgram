@@ -91,9 +91,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         if request.method == 'DELETE':
-            obj = user.favorite_recipes.filter(recipe=recipe)
-            if not obj.exists():
-                raise exceptions.ValidationError('Рецепта не было в избранном.')            obj.delete()
+            user.favorite_recipes.filter(recipe=recipe).delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
@@ -115,10 +113,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         if request.method == 'DELETE':
-            obj = user.shopping_cart_recipes.filter(recipe=recipe)
-            if not obj.exists():
-                raise exceptions.ValidationError('Рецепта не было в списке покупок.')
-            obj.delete()
+            user.shopping_cart_recipes.filter(recipe=recipe).delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
@@ -152,3 +147,13 @@ class RecipeViewSet(viewsets.ModelViewSet):
             'attachment; filename="shopping_list.txt"'
         )
         return response
+
+    @action(
+        detail=True,
+        methods=('get',),
+        url_path='get-link',
+    )
+    def get_link(self, request, pk=None):
+        recipe = self.get_object()
+        short_link = request.build_absolute_uri(f'/recipes/{recipe.id}/')
+        return Response({'short-link': short_link}, status=status.HTTP_200_OK)

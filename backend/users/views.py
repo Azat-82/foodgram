@@ -80,8 +80,5 @@ class FoodgramUserViewSet(UserViewSet):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         if request.method == 'DELETE':
-            subscription = user.subscriptions.filter(author=author)
-            if subscription.exists():
-                subscription.delete()
-                return Response(status=status.HTTP_204_NO_CONTENT)
-            raise exceptions.ValidationError('Вы не были подписаны на автора')
+            user.subscriptions.filter(author=author).delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
