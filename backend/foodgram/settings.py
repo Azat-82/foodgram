@@ -150,10 +150,9 @@ REST_FRAMEWORK = {
 }
 
 DJOSER = {
-    'LOGIN_FIELD': 'email',
     'SERIALIZERS': {
-        'user': 'users.serializers.CustomUserSerializer',
-        'current_user': 'users.serializers.CustomUserSerializer',
-        'user_create': 'users.serializers.CustomUserCreateSerializer',
+        'user_create': 'users.serializers.FoodgramUserCreateSerializer',
+        'user': 'users.serializers.FoodgramUserSerializer',
+        'current_user': 'users.serializers.FoodgramUserSerializer',
     },
 }

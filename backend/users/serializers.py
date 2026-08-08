@@ -1,9 +1,13 @@
-from djoser.serializers import UserSerializer, UserCreateSerializer
+from django.contrib.auth import get_user_model
+from djoser.serializers import UserCreateSerializer, UserSerializer
 from rest_framework import serializers
-from .models import User, Subscription
+
+from .models import Subscription
+
+User = get_user_model()
 
 
-class CustomUserCreateSerializer(UserCreateSerializer):
+class FoodgramUserCreateSerializer(UserCreateSerializer):
     """Сериализатор для регистрации пользователей (все поля обязательны)."""
 
     class Meta:
@@ -22,8 +26,7 @@ class CustomUserCreateSerializer(UserCreateSerializer):
         }
 
 
-class CustomUserSerializer(UserSerializer):
-    """Сериализатор для отображения профиля пользователя."""
+class FoodgramUserSerializer(UserSerializer):
     is_subscribed = serializers.SerializerMethodField()
     avatar = serializers.ImageField(required=False, allow_null=True)
 

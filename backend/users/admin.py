@@ -1,10 +1,14 @@
 from django.contrib import admin
-from django.contrib.auth.admin import UserAdmin
-from .models import User, Subscription
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.contrib.auth import get_user_model
+
+from .models import Subscription
+
+User = get_user_model()
 
 
 @admin.register(User)
-class CustomUserAdmin(UserAdmin):
+class FoodgramUserAdmin(BaseUserAdmin):
     list_display = ('id', 'username', 'email', 'first_name', 'last_name')
     search_fields = ('email', 'username')
     list_filter = ('email', 'username')

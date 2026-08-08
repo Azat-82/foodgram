@@ -1,7 +1,7 @@
 from django.core.validators import MinValueValidator
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
-from users.serializers import CustomUserSerializer
+from users.serializers import FoodgramUserSerializer
 
 from .fields import Base64ImageField
 from .models import Tag, Ingredient, Recipe, RecipeIngredient
