@@ -1,37 +1,59 @@
+from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from djoser.views import UserViewSet
-from rest_framework import status
+from rest_framework import status, exceptions
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .models import User, Subscription
-from .serializers import CustomUserSerializer
+from .models import Subscription
+from .serializers import FoodgramUserSerializer, SubscriptionSerializer
+
+User = get_user_model()
 
 
-class CustomUserViewSet(UserViewSet):
-    """Кастомный вьюсет для работы с пользователями, подписками и аватарами."""
+class FoodgramUserViewSet(UserViewSet):
+    """Вьюсет для работы с пользователями, подписками и аватарами."""
 
     @action(
         detail=False,
-        permission_classes=[IsAuthenticated],
+        methods=('get',),
+        permission_classes=(IsAuthenticated,),
+    )
+    def subscriptions(self, request):
+        user = request.user
+        queryset = Subscription.objects.filter(user=user)
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = SubscriptionSerializer(
+                page, many=True, context={'request': request}
+            )
+            return self.get_paginated_response(serializer.data)
+
+        serializer = SubscriptionSerializer(
+            queryset, many=True, context={'request': request}
+        )
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(
+        detail=False,
+        methods=('put', 'delete'),
         url_path='me/avatar',
+        permission_classes=(IsAuthenticated,),
     )
     def avatar(self, request):
-        """Метод для сохранения или удаления аватара текущего пользователя."""
         user = request.user
+
         if request.method == 'PUT':
             if 'avatar' not in request.data:
-                return Response(
-                    {'error': 'Файл аватара обязателен'},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            user.avatar = request.data['avatar']
-            user.save()
-            return Response(
-                {'avatar': user.avatar.url},
-                status=status.HTTP_200_OK,
+                raise exceptions.ValidationError('Файл аватара обязателен')
+
+            serializer = FoodgramUserSerializer(
+                user, data=request.data, partial=True
             )
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
 
         if request.method == 'DELETE':
             if user.avatar:
@@ -41,42 +63,25 @@ class CustomUserViewSet(UserViewSet):
 
     @action(
         detail=True,
-        methods=['post', 'delete'],
-        permission_classes=[IsAuthenticated],
+        methods=('post', 'delete'),
+        permission_classes=(IsAuthenticated,),
     )
     def subscribe(self, request, id=None):
-        """Метод для оформления и отмены подписки на автора."""
         author = get_object_or_404(User, id=id)
         user = request.user
 
         if request.method == 'POST':
-            if user == author:
-                return Response(
-                    {'errors': 'Нельзя подписаться на самого себя'},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            if Subscription.objects.filter(user=user, author=author).exists():
-                return Response(
-                    {'errors': 'Вы уже подписаны на этого автора'},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
-            Subscription.objects.create(user=user, author=author)
-            serializer = CustomUserSerializer(
-                author,
-                context={'request': request},
+            serializer = SubscriptionSerializer(
+                data={'user': user.id, 'author': author.id},
+                context={'request': request}
             )
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         if request.method == 'DELETE':
-            subscription = Subscription.objects.filter(
-                user=user,
-                author=author,
-            )
+            subscription = user.subscriptions.filter(author=author)
             if subscription.exists():
                 subscription.delete()
                 return Response(status=status.HTTP_204_NO_CONTENT)
-            return Response(
-                {'errors': 'Вы не были подписаны на этого автора'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            raise exceptions.ValidationError('Вы не были подписаны на автора')

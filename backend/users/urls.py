@@ -1,9 +1,9 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
-from .views import CustomUserViewSet
+from .views import FoodgramUserViewSet
 
 router = DefaultRouter()
-router.register('users', CustomUserViewSet, basename='users')
+router.register('users', FoodgramUserViewSet, basename='users')
 
 urlpatterns = [
     path('', include(router.urls)),

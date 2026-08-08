@@ -50,3 +50,28 @@ class FoodgramUserSerializer(UserSerializer):
             user=request.user,
             author=obj,
         ).exists()
+
+class SubscriptionSerializer(serializers.ModelSerializer):
+    """Сериализатор для создания и валидации подписок."""
+
+    class Meta:
+        model = Subscription
+        fields = ('user', 'author')
+
+    def validate(self, data):
+        user = data['user']
+        author = data['author']
+
+        if user == author:
+            raise serializers.ValidationError('Нельзя подписаться на самого себя!')
+
+        if user.subscriptions.filter(author=author).exists():
+            raise serializers.ValidationError('Вы уже подписаны на этого автора!')
+
+        return data
+
+    def to_representation(self, instance):
+        return FoodgramUserSerializer(
+            instance.author, 
+            context=self.context
+        ).data
