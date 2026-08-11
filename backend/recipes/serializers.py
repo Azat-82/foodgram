@@ -56,7 +56,7 @@ class RecipeReadSerializer(serializers.ModelSerializer):
     """Сериализатор для безопасного отображения рецептов (GET)."""
 
     tags = TagSerializer(many=True, read_only=True)
-    author = CustomUserSerializer(read_only=True)
+    author = FoodgramUserSerializer(read_only=True)
     ingredients = RecipeIngredientReadSerializer(
         many=True,
         source='recipe_ingredients'
