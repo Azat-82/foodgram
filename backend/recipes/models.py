@@ -9,6 +9,12 @@ class Tag(models.Model):
     """Модель тега."""
 
     name = models.CharField('Название', max_length=200, unique=True)
+    color = models.CharField(
+        'Цвет в HEX',
+        max_length=7,
+        unique=True,
+        null=True
+    )
     slug = models.SlugField('Уникальный слаг', max_length=200, unique=True)
 
     class Meta:

@@ -51,6 +51,7 @@ class FoodgramUserSerializer(UserSerializer):
             author=obj,
         ).exists()
 
+
 class SubscriptionSerializer(serializers.ModelSerializer):
     """Сериализатор для создания, валидации и отображения подписок."""
 
@@ -62,19 +63,25 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         user = data['user']
         author = data['author']
         if user == author:
-            raise serializers.ValidationError('Нельзя подписаться на самого себя!')
+            raise serializers.ValidationError(
+                'Нельзя подписаться на самого себя!'
+            )
         if user.subscriptions.filter(author=author).exists():
-            raise serializers.ValidationError('Вы уже подписаны на этого автора!')
+            raise serializers.ValidationError(
+                'Вы уже подписаны на этого автора!'
+            )
         return data
 
     def to_representation(self, instance):
-        """Формируем расширенный ответ для фронтенда с рецептами автора."""
         author = instance.author
         request = self.context.get('request')
-        
-        recipes_limit = request.query_params.get('recipes_limit') if request else None
+
+        recipes_limit = (
+            request.query_params.get('recipes_limit')
+            if request else None
+        )
         recipes_queryset = author.recipes.all()
-        
+
         if recipes_limit and recipes_limit.isdigit():
             recipes_queryset = recipes_queryset[:int(recipes_limit)]
 
@@ -82,11 +89,23 @@ class SubscriptionSerializer(serializers.ModelSerializer):
             {
                 'id': recipe.id,
                 'name': recipe.name,
-                'image': request.build_absolute_uri(recipe.image.url) if recipe.image and request else recipe.image.url if recipe.image else None,
+                'image': (
+                    request.build_absolute_uri(recipe.image.url)
+                    if recipe.image and request else (
+                        recipe.image.url if recipe.image else None
+                    )
+                ),
                 'cooking_time': recipe.cooking_time
             }
             for recipe in recipes_queryset
         ]
+
+        avatar_url = None
+        if hasattr(author, 'avatar') and author.avatar:
+            avatar_url = (
+                request.build_absolute_uri(author.avatar.url)
+                if request else author.avatar.url
+            )
 
         return {
             'email': author.email,
@@ -97,5 +116,5 @@ class SubscriptionSerializer(serializers.ModelSerializer):
             'is_subscribed': True,
             'recipes': recipes_data,
             'recipes_count': author.recipes.count(),
-            'avatar': request.build_absolute_uri(author.avatar.url) if author.avatar and request else author.avatar.url if author.avatar else None,
+            'avatar': avatar_url,
         }

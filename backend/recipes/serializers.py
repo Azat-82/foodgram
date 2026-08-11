@@ -4,7 +4,9 @@ from rest_framework import serializers
 from users.serializers import FoodgramUserSerializer
 
 from .fields import Base64ImageField
-from .models import Tag, Ingredient, Recipe, RecipeIngredient
+from .models import (
+    Tag, Ingredient, Recipe, RecipeIngredient, Favorite, ShoppingCart
+)
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -84,7 +86,7 @@ class RecipeReadSerializer(serializers.ModelSerializer):
         if not request or request.user.is_anonymous:
             return False
         return obj.favorite_recipes.filter(user=request.user).exists()
-    
+
     def get_is_in_shopping_cart(self, obj):
         request = self.context.get('request')
         if not request or request.user.is_anonymous:
@@ -117,7 +119,9 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         recipe.recipe_ingredients.all().delete()
         ingredients_to_create = []
         for ingredient in ingredients_data:
-            current_ingredient = get_object_or_404(Ingredient, id=ingredient['id'])
+            current_ingredient = get_object_or_404(
+                Ingredient, id=ingredient['id']
+            )
 
             ingredients_to_create.append(
                 RecipeIngredient(
@@ -155,6 +159,7 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         context = {'request': self.context.get('request')}
         return RecipeReadSerializer(instance, context=context).data
 
+
 class FavoriteSerializer(serializers.ModelSerializer):
     """Сериализатор для добавления рецептов в избранное."""
 
@@ -166,14 +171,19 @@ class FavoriteSerializer(serializers.ModelSerializer):
         user = data['user']
         recipe = data['recipe']
         if user.favorites.filter(recipe=recipe).exists():
-            raise serializers.ValidationError('Рецепт уже добавлен в избранное.')
+            raise serializers.ValidationError(
+                'Рецепт уже добавлен в избранное.'
+            )
         return data
 
     def to_representation(self, instance):
         return {
             'id': instance.recipe.id,
             'name': instance.recipe.name,
-            'image': instance.recipe.image.url if instance.recipe.image else None,
+            'image': (
+                instance.recipe.image.url
+                if instance.recipe.image else None
+            ),
             'cooking_time': instance.recipe.cooking_time,
         }
 
@@ -196,6 +206,9 @@ class ShoppingCartSerializer(serializers.ModelSerializer):
         return {
             'id': instance.recipe.id,
             'name': instance.recipe.name,
-            'image': instance.recipe.image.url if instance.recipe.image else None,
+            'image': (
+                instance.recipe.image.url
+                if instance.recipe.image else None
+            ),
             'cooking_time': instance.recipe.cooking_time,
         }

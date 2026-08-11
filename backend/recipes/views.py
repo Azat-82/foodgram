@@ -1,16 +1,17 @@
 from django.db.models import Sum
 from django.http import HttpResponse
-from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 import django_filters
-from rest_framework import status, filters, viewsets, exceptions
+from rest_framework import status, filters, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
+from rest_framework.permissions import (
+    IsAuthenticated, IsAuthenticatedOrReadOnly
+)
 from rest_framework.response import Response
 
 from .models import (
     Tag, Ingredient, Recipe,
-    Favorite, ShoppingCart, RecipeIngredient
+    RecipeIngredient
 )
 
 from .pagination import LimitPageNumberPagination
