@@ -32,10 +32,7 @@ class FoodgramUserSerializer(UserSerializer):
         request = self.context.get('request')
         if not request or request.user.is_anonymous:
             return False
-        return Subscription.objects.filter(
-            user=request.user,
-            author=obj,
-        ).exists()
+        return request.user.follower.filter(author=obj).exists()
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -272,7 +269,7 @@ class SubscriptionSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 'Нельзя подписаться на самого себя!'
             )
-        if user.subscriptions.filter(author=author).exists():
+        if user.follower.filter(author=author).exists():
             raise serializers.ValidationError(
                 'Вы уже подписаны на этого автора!'
             )
@@ -291,7 +288,7 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         if recipes_limit and recipes_limit.isdigit():
             recipes_queryset = recipes_queryset[:int(recipes_limit)]
 
-        recipes_data = [
+        recipes_data = tuple(
             {
                 'id': recipe.id,
                 'name': recipe.name,
@@ -304,7 +301,7 @@ class SubscriptionSerializer(serializers.ModelSerializer):
                 'cooking_time': recipe.cooking_time
             }
             for recipe in recipes_queryset
-        ]
+        )
 
         avatar_url = None
         if hasattr(author, 'avatar') and author.avatar:

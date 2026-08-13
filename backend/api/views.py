@@ -1,32 +1,31 @@
+from django.contrib.auth import get_user_model
+from django.db.models import Sum
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
-from rest_framework import status, viewsets, exceptions
+from rest_framework import exceptions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import (
     IsAuthenticated, IsAuthenticatedOrReadOnly
 )
 from rest_framework.response import Response
-from django.contrib.auth import get_user_model
-from django.db.models import Sum
-from django.http import HttpResponse
-from django.shortcuts import get_object_or_404
 
 from api.filters import IngredientSearchFilter, RecipeFilter
 from api.serializers import (
-    TagSerializer,
+    FavoriteSerializer,
+    FoodgramUserSerializer,
     IngredientSerializer,
     RecipeReadSerializer,
     RecipeWriteSerializer,
-    FavoriteSerializer,
     ShoppingCartSerializer,
-    FoodgramUserSerializer,
     SubscriptionSerializer,
+    TagSerializer,
 )
 from recipes.models import (
-    Tag, Ingredient, Recipe,
+    Ingredient, Recipe, Tag,
     RecipeIngredient
 )
-from users.models import Subscription
 from .pagination import LimitPageNumberPagination
 
 User = get_user_model()
@@ -121,23 +120,26 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def download_shopping_cart(self, request):
         user = request.user
         ingredients = RecipeIngredient.objects.filter(
-            recipe__shopping_cart__user=user
+            recipe__shopping_cart_recipes__user=user
         ).values(
             'ingredient__name', 'ingredient__measurement_unit'
         ).annotate(
             total_amount=Sum('amount')
         ).order_by('ingredient__name')
 
-        wishlist = [f'Список покупок для пользователя: {user.username}\n']
-        for item in ingredients:
-            wishlist.append(
-                f'• {item["ingredient__name"]} '
-                f'({item["ingredient__measurement_unit"]}) — '
-                f'{item["total_amount"]}\n'
-            )
+        header = f'Список покупок для пользователя: {user.username}\n'
+
+        shopping_list = '\n'.join(
+            f'• {item["ingredient__name"]} '
+            f'({item["ingredient__measurement_unit"]}) — '
+            f'{item["total_amount"]}'
+            for item in ingredients
+        )
+
+        wishlist_text = f'{header}\n{shopping_list}'
 
         response = HttpResponse(
-            wishlist,
+            wishlist_text,
             content_type='text/plain; charset=utf-8',
         )
         response['Content-Disposition'] = (
@@ -161,12 +163,14 @@ class FoodgramUserViewSet(UserViewSet):
 
     @action(
         detail=False,
-        methods=('get',),
+        methods=['get'],
         permission_classes=(IsAuthenticated,),
     )
     def subscriptions(self, request):
         user = request.user
-        queryset = Subscription.objects.filter(user=user)
+
+        queryset = user.follower.all()
+
         page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = SubscriptionSerializer(
