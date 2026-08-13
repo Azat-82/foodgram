@@ -12,7 +12,7 @@ class Command(BaseCommand):
 
         if not os.path.exists(file_path):
             self.stdout.write(
-                self.style.ERROR(f'Файл не найден по пути: {file_path}')
+                self.style.ERROR('Файл не найден по пути: ' + file_path)
             )
             return
 
@@ -29,8 +29,10 @@ class Command(BaseCommand):
 
         Ingredient.objects.bulk_create(ingredients_to_create)
 
+        ingredients_count = len(ingredients_to_create)
+
         self.stdout.write(
             self.style.SUCCESS(
-                f'Успешно загружено {len(ingredients_to_create)} ингредиентов.'
+                f'Успешно загружено {ingredients_count} ингредиентов.'
             )
         )

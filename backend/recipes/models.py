@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from django.core.validators import MinValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 User = get_user_model()
@@ -12,8 +12,7 @@ class Tag(models.Model):
     color = models.CharField(
         'Цвет в HEX',
         max_length=7,
-        unique=True,
-        null=True
+        unique=True
     )
     slug = models.SlugField('Уникальный слаг', max_length=200, unique=True)
 
@@ -66,7 +65,8 @@ class Recipe(models.Model):
     cooking_time = models.PositiveSmallIntegerField(
         'Время приготовления (в минутах)',
         validators=[
-            MinValueValidator(1, message='Минимальное время — 1 минута!')
+            MinValueValidator(1, message='Минимальное время — 1 минута!'),
+            MaxValueValidator(32000, message='Время приготовления ограничено.')
         ]
     )
     pub_date = models.DateTimeField('Дата публикации', auto_now_add=True)
