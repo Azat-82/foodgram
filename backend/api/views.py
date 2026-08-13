@@ -1,18 +1,17 @@
-from django.contrib.auth import get_user_model
-from django.db.models import Sum
-from django.http import HttpResponse
-from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
-import django_filters
 from djoser.views import UserViewSet
-
-from rest_framework import status, filters, viewsets, exceptions
+from rest_framework import status, viewsets, exceptions
 from rest_framework.decorators import action
 from rest_framework.permissions import (
     IsAuthenticated, IsAuthenticatedOrReadOnly
 )
 from rest_framework.response import Response
+from django.contrib.auth import get_user_model
+from django.db.models import Sum
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
 
+from api.filters import IngredientSearchFilter, RecipeFilter
 from api.serializers import (
     TagSerializer,
     IngredientSerializer,
@@ -28,20 +27,14 @@ from recipes.models import (
     RecipeIngredient
 )
 from users.models import Subscription
-
 from .pagination import LimitPageNumberPagination
 
 User = get_user_model()
 
 
-class IngredientSearchFilter(filters.SearchFilter):
-    """Кастомный фильтр для поиска ингредиентов с начала строки."""
-
-    search_param = 'name'
-
-
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
     """Вьюсет для просмотра тегов."""
+
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
     permission_classes = (IsAuthenticatedOrReadOnly,)
@@ -50,24 +43,13 @@ class TagViewSet(viewsets.ReadOnlyModelViewSet):
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     """Вьюсет для просмотра ингредиентов с поиском по названию."""
+
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
     permission_classes = (IsAuthenticatedOrReadOnly,)
     pagination_class = None
     filter_backends = (IngredientSearchFilter,)
     search_fields = ('^name',)
-
-
-class RecipeFilter(django_filters.FilterSet):
-    tags = django_filters.ModelMultipleChoiceFilter(
-        field_name='tags__slug',
-        to_field_name='slug',
-        queryset=Tag.objects.all()
-    )
-
-    class Meta:
-        model = Recipe
-        fields = ('author', 'tags')
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
@@ -134,7 +116,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     @action(
         detail=False,
         methods=['get'],
-        permission_classes=[IsAuthenticated],
+        permission_classes=(IsAuthenticated,),
     )
     def download_shopping_cart(self, request):
         user = request.user

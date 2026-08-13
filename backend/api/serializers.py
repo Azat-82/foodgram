@@ -1,6 +1,5 @@
 from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator
-from django.shortcuts import get_object_or_404
 from djoser.serializers import UserCreateSerializer, UserSerializer
 from rest_framework import serializers
 
@@ -147,19 +146,15 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
 
     def _save_ingredients(self, recipe, ingredients_data):
         recipe.recipe_ingredients.all().delete()
-        ingredients_to_create = []
-        for ingredient in ingredients_data:
-            current_ingredient = get_object_or_404(
-                Ingredient, id=ingredient['id']
-            )
 
-            ingredients_to_create.append(
-                RecipeIngredient(
-                    recipe=recipe,
-                    ingredient=current_ingredient,
-                    amount=ingredient['amount']
-                )
+        ingredients_to_create = [
+            RecipeIngredient(
+                recipe=recipe,
+                ingredient_id=ingredient['id'],
+                amount=ingredient['amount']
             )
+            for ingredient in ingredients_data
+        ]
 
         RecipeIngredient.objects.bulk_create(ingredients_to_create)
 
