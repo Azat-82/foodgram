@@ -276,7 +276,7 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         return data
 
     def to_representation(self, instance):
-        author = instance
+        author = instance.author
         request = self.context.get('request')
 
         recipes_limit = (

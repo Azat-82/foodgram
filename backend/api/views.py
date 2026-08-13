@@ -168,8 +168,7 @@ class FoodgramUserViewSet(UserViewSet):
     )
     def subscriptions(self, request):
         user = request.user
-
-        queryset = get_user_model().objects.filter(following__user=user)
+        queryset = user.follower.all()
 
         page = self.paginate_queryset(queryset)
         if page is not None:
