@@ -319,9 +319,8 @@ class SubscriptionSerializer(serializers.ModelSerializer):
             'username': author.username,
             'first_name': author.first_name,
             'last_name': author.last_name,
-            # Для страницы подписок возвращаем True, так как мы точно на него подписаны
             'is_subscribed': True,
-            'recipes': recipes_data,
-            'recipes_count': author.recipes.count(),
+            'recipes': list(recipes_data),
+            'recipes_count': int(author.recipes.count()),
             'avatar': avatar_url,
         }
