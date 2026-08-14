@@ -171,10 +171,9 @@ class FoodgramUserViewSet(UserViewSet):
         user = request.user
         queryset = Subscription.objects.filter(user=user)
 
-        paginator = self.pagination_class()
+        paginator = LimitPageNumberPagination()
 
         page = paginator.paginate_queryset(queryset, request, view=self)
-
         if page is not None:
             serializer = SubscriptionSerializer(
                 page, many=True, context={'request': request}
