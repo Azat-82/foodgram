@@ -321,6 +321,6 @@ class SubscriptionSerializer(serializers.ModelSerializer):
             'last_name': author.last_name,
             'is_subscribed': True,
             'recipes': list(recipes_data),
-            'recipes_count': int(author.recipes.count()),
+            'recipes_count': author.recipes.count(),
             'avatar': avatar_url,
         }
