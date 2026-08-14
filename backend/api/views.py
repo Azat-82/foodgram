@@ -162,7 +162,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
 class FoodgramUserViewSet(UserViewSet):
     """Вьюсет для работы с пользователями, подписками и аватарами."""
 
-
     @action(
         detail=False,
         methods=['get'],

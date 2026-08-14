@@ -283,7 +283,11 @@ class SubscriptionSerializer(serializers.ModelSerializer):
             request.query_params.get('recipes_limit')
             if request else None
         )
-        recipes_queryset = author.recipes.all()
+
+        from recipes.models import Recipe
+        recipes_queryset = Recipe.objects.filter(author=author)
+
+        recipes_count = recipes_queryset.count()
 
         if recipes_limit and recipes_limit.isdigit():
             recipes_queryset = recipes_queryset[:int(recipes_limit)]
@@ -321,6 +325,6 @@ class SubscriptionSerializer(serializers.ModelSerializer):
             'last_name': author.last_name,
             'is_subscribed': True,
             'recipes': list(recipes_data),
-            'recipes_count': author.recipes.count(),
+            'recipes_count': int(recipes_count),
             'avatar': avatar_url,
         }
