@@ -305,10 +305,13 @@ class SubscriptionSerializer(serializers.ModelSerializer):
 
         avatar_url = None
         if hasattr(author, 'avatar') and author.avatar:
-            avatar_url = (
-                request.build_absolute_uri(author.avatar.url)
-                if request else author.avatar.url
-            )
+            try:
+                avatar_url = (
+                    request.build_absolute_uri(author.avatar.url)
+                    if request else author.avatar.url
+                )
+            except ValueError:
+                avatar_url = None
 
         return {
             'email': author.email,
@@ -316,6 +319,7 @@ class SubscriptionSerializer(serializers.ModelSerializer):
             'username': author.username,
             'first_name': author.first_name,
             'last_name': author.last_name,
+            # Для страницы подписок возвращаем True, так как мы точно на него подписаны
             'is_subscribed': True,
             'recipes': recipes_data,
             'recipes_count': author.recipes.count(),

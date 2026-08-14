@@ -26,6 +26,7 @@ from recipes.models import (
     Ingredient, Recipe, Tag,
     RecipeIngredient
 )
+from users.models import Subscription
 from .pagination import LimitPageNumberPagination
 
 User = get_user_model()
@@ -168,7 +169,8 @@ class FoodgramUserViewSet(UserViewSet):
     )
     def subscriptions(self, request):
         user = request.user
-        queryset = user.follower.all()
+
+        queryset = Subscription.objects.filter(user=user)
 
         page = self.paginate_queryset(queryset)
         if page is not None:
