@@ -162,11 +162,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
 class FoodgramUserViewSet(UserViewSet):
     """Вьюсет для работы с пользователями, подписками и аватарами."""
 
-    @action(
-        detail=False,
-        methods=['get'],
-        permission_classes=(IsAuthenticated,),
-    )
+
     @action(
         detail=False,
         methods=['get'],
@@ -174,15 +170,17 @@ class FoodgramUserViewSet(UserViewSet):
     )
     def subscriptions(self, request):
         user = request.user
-
         queryset = Subscription.objects.filter(user=user)
 
-        page = self.paginate_queryset(queryset)
+        paginator = self.pagination_class()
+
+        page = paginator.paginate_queryset(queryset, request, view=self)
+
         if page is not None:
             serializer = SubscriptionSerializer(
                 page, many=True, context={'request': request}
             )
-            return self.get_paginated_response(serializer.data)
+            return paginator.get_paginated_response(serializer.data)
 
         serializer = SubscriptionSerializer(
             queryset, many=True, context={'request': request}
