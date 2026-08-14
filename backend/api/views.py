@@ -184,3 +184,48 @@ class FoodgramUserViewSet(UserViewSet):
             queryset, many=True, context={'request': request}
         )
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(
+        detail=True,
+        methods=['post', 'delete'],
+        permission_classes=(IsAuthenticated,),
+    )
+    def subscribe(self, request, id=None):
+        user = request.user
+        author = get_object_or_404(get_user_model(), id=id)
+
+        if request.method == 'POST':
+            if user == author:
+                return Response(
+                    {'errors': 'Нельзя подписаться на самого себя!'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            subscription, created = Subscription.objects.get_or_create(
+                user=user,
+                author=author
+            )
+            if not created:
+                return Response(
+                    {'errors': 'Вы уже подписаны на этого автора!'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            serializer = SubscriptionSerializer(
+                subscription, context={'request': request}
+            )
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        if request.method == 'DELETE':
+            deleted_count, _ = Subscription.objects.filter(
+                user=user,
+                author=author
+            ).delete()
+
+            if deleted_count == 0:
+                return Response(
+                    {'errors': 'Вы не были подписаны на этого автора!'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            return Response(status=status.HTTP_204_NO_CONTENT)
