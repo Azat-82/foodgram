@@ -254,53 +254,65 @@ class FoodgramUserCreateSerializer(UserCreateSerializer):
 
 
 class SubscriptionSerializer(serializers.ModelSerializer):
-    """Сериализатор для создания, валидации и отображения подписок."""
+    """Сериализатор для отображения подписок."""
+
+    email = serializers.ReadOnlyField(source='author.email')
+    id = serializers.ReadOnlyField(source='author.id')
+    username = serializers.ReadOnlyField(source='author.username')
+    first_name = serializers.ReadOnlyField(source='author.first_name')
+    last_name = serializers.ReadOnlyField(source='author.last_name')
+    is_subscribed = serializers.SerializerMethodField()
+    recipes = serializers.SerializerMethodField()
+    recipes_count = serializers.SerializerMethodField()
+    avatar = serializers.SerializerMethodField()
 
     class Meta:
         model = Subscription
-        fields = ('user', 'author')
+        fields = (
+            'email',
+            'id',
+            'username',
+            'first_name',
+            'last_name',
+            'is_subscribed',
+            'recipes',
+            'recipes_count',
+            'avatar',
+        )
 
     def validate(self, data):
         user = data['user']
         author = data['author']
-
         if user == author:
-            raise serializers.ValidationError(
-                'Нельзя подписаться на самого себя!'
-            )
+            raise serializers.ValidationError('Нельзя подписаться на самого себя!')
         if user.follower.filter(author=author).exists():
-            raise serializers.ValidationError(
-                'Вы уже подписаны на этого автора!'
-            )
+            raise serializers.ValidationError('Вы уже подписаны на этого автора!')
         return data
 
-    def to_representation(self, instance):
-        author = instance.author
+    def get_is_subscribed(self, obj):
+        return True
+
+    def get_recipes_count(self, obj):
+        return len(obj.author.recipes.all())
+
+    def get_avatar(self, obj):
         request = self.context.get('request')
+        author = obj.author
+        if hasattr(author, 'avatar') and author.avatar:
+            return request.build_absolute_uri(author.avatar.url) if request else author.avatar.url
+        return None
 
-        user_serializer = FoodgramUserSerializer(
-            author,
-            context=self.context
-        )
-        data = user_serializer.data
+    def get_recipes(self, obj):
+        request = self.context.get('request')
+        recipes_queryset = obj.author.recipes.all()
 
-        recipes_queryset = author.recipes.all()
-        recipes_count = len(recipes_queryset)
-
-        recipes_limit = (
-            request.query_params.get('recipes_limit')
-            if request else None
-        )
+        recipes_limit = request.query_params.get('recipes_limit') if request else None
         if recipes_limit and recipes_limit.isdigit():
             recipes_queryset = recipes_queryset[:int(recipes_limit)]
 
-        recipes_serializer = RecipeShortSerializer(
+        serializer = RecipeShortSerializer(
             recipes_queryset,
             many=True,
             context=self.context
         )
-
-        data['recipes'] = recipes_serializer.data
-        data['recipes_count'] = recipes_count
-
-        return data
+        return serializer.data
