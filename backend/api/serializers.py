@@ -253,66 +253,37 @@ class FoodgramUserCreateSerializer(UserCreateSerializer):
         }
 
 
-class SubscriptionSerializer(serializers.ModelSerializer):
-    """Сериализатор для отображения подписок."""
-
-    email = serializers.ReadOnlyField(source='author.email')
-    id = serializers.ReadOnlyField(source='author.id')
-    username = serializers.ReadOnlyField(source='author.username')
-    first_name = serializers.ReadOnlyField(source='author.first_name')
-    last_name = serializers.ReadOnlyField(source='author.last_name')
-    is_subscribed = serializers.SerializerMethodField()
+class SubscriptionSerializer(FoodgramUserSerializer):
+    """Сериализатор для отображения подписок на авторов."""
+    
+    # Объявляем новые поля, которых нет в обычном профиле пользователя
     recipes = serializers.SerializerMethodField()
     recipes_count = serializers.SerializerMethodField()
-    avatar = serializers.SerializerMethodField()
 
-    class Meta:
-        model = Subscription
-        fields = (
-            'email',
-            'id',
-            'username',
-            'first_name',
-            'last_name',
-            'is_subscribed',
-            'recipes',
-            'recipes_count',
-            'avatar',
-        )
-
-    def validate(self, data):
-        user = data['user']
-        author = data['author']
-        if user == author:
-            raise serializers.ValidationError('Нельзя подписаться на самого себя!')
-        if user.follower.filter(author=author).exists():
-            raise serializers.ValidationError('Вы уже подписаны на этого автора!')
-        return data
-
-    def get_is_subscribed(self, obj):
-        return True
+    class Meta(FoodgramUserSerializer.Meta):
+        # Расширяем поля родительского FoodgramUserSerializer,
+        # чтобы автоматически подтянулись id, username, email, avatar, is_subscribed
+        fields = FoodgramUserSerializer.Meta.fields + ('recipes', 'recipes_count')
+        read_only_fields = fields
 
     def get_recipes_count(self, obj):
-        return len(obj.author.recipes.all())
-
-    def get_avatar(self, obj):
-        request = self.context.get('request')
-        author = obj.author
-        if hasattr(author, 'avatar') and author.avatar:
-            return request.build_absolute_uri(author.avatar.url) if request else author.avatar.url
-        return None
+        # obj — это объект User (автор), так как мы наследуемся от сериализатора пользователя.
+        # len() не делает SQL-запрос при настроенном prefetch_related
+        return len(obj.recipes.all())
 
     def get_recipes(self, obj):
         request = self.context.get('request')
-        recipes_queryset = obj.author.recipes.all()
-
+        recipes_queryset = obj.recipes.all()
+        
+        # Обрабатываем лимит рецептов из query parameters
         recipes_limit = request.query_params.get('recipes_limit') if request else None
         if recipes_limit and recipes_limit.isdigit():
             recipes_queryset = recipes_queryset[:int(recipes_limit)]
-
+            
         serializer = RecipeShortSerializer(
             recipes_queryset,
             many=True,
             context=self.context
         )
         return serializer.data
+
