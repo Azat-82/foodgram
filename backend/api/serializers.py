@@ -12,6 +12,14 @@ from .fields import Base64ImageField
 User = get_user_model()
 
 
+class RecipeShortSerializer(serializers.ModelSerializer):
+    """Облегченный сериализатор рецепта для подписок и списков."""
+
+    class Meta:
+        model = Recipe
+        fields = ('id', 'name', 'image', 'cooking_time')
+
+
 class FoodgramUserSerializer(UserSerializer):
     is_subscribed = serializers.SerializerMethodField()
     avatar = serializers.ImageField(required=False, allow_null=True)
@@ -199,15 +207,10 @@ class FavoriteSerializer(serializers.ModelSerializer):
         return data
 
     def to_representation(self, instance):
-        return {
-            'id': instance.recipe.id,
-            'name': instance.recipe.name,
-            'image': (
-                instance.recipe.image.url
-                if instance.recipe.image else None
-            ),
-            'cooking_time': instance.recipe.cooking_time,
-        }
+        return RecipeShortSerializer(
+            instance.recipe,
+            context=self.context
+        ).data
 
 
 class ShoppingCartSerializer(serializers.ModelSerializer):
@@ -225,15 +228,10 @@ class ShoppingCartSerializer(serializers.ModelSerializer):
         return data
 
     def to_representation(self, instance):
-        return {
-            'id': instance.recipe.id,
-            'name': instance.recipe.name,
-            'image': (
-                instance.recipe.image.url
-                if instance.recipe.image else None
-            ),
-            'cooking_time': instance.recipe.cooking_time,
-        }
+        return RecipeShortSerializer(
+            instance.recipe,
+            context=self.context
+        ).data
 
 
 class FoodgramUserCreateSerializer(UserCreateSerializer):
@@ -265,6 +263,7 @@ class SubscriptionSerializer(serializers.ModelSerializer):
     def validate(self, data):
         user = data['user']
         author = data['author']
+
         if user == author:
             raise serializers.ValidationError(
                 'Нельзя подписаться на самого себя!'
@@ -279,52 +278,29 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         author = instance.author
         request = self.context.get('request')
 
+        user_serializer = FoodgramUserSerializer(
+            author,
+            context=self.context
+        )
+        data = user_serializer.data
+
+        recipes_queryset = author.recipes.all()
+        recipes_count = len(recipes_queryset)
+
         recipes_limit = (
             request.query_params.get('recipes_limit')
             if request else None
         )
-
-        from recipes.models import Recipe
-        recipes_queryset = Recipe.objects.filter(author=author)
-
-        recipes_count = recipes_queryset.count()
-
         if recipes_limit and recipes_limit.isdigit():
             recipes_queryset = recipes_queryset[:int(recipes_limit)]
 
-        recipes_data = tuple(
-            {
-                'id': recipe.id,
-                'name': recipe.name,
-                'image': (
-                    request.build_absolute_uri(recipe.image.url)
-                    if recipe.image and request else (
-                        recipe.image.url if recipe.image else None
-                    )
-                ),
-                'cooking_time': recipe.cooking_time
-            }
-            for recipe in recipes_queryset
+        recipes_serializer = RecipeShortSerializer(
+            recipes_queryset,
+            many=True,
+            context=self.context
         )
 
-        avatar_url = None
-        if hasattr(author, 'avatar') and author.avatar:
-            try:
-                avatar_url = (
-                    request.build_absolute_uri(author.avatar.url)
-                    if request else author.avatar.url
-                )
-            except ValueError:
-                avatar_url = None
+        data['recipes'] = recipes_serializer.data
+        data['recipes_count'] = recipes_count
 
-        return {
-            'email': author.email,
-            'id': author.id,
-            'username': author.username,
-            'first_name': author.first_name,
-            'last_name': author.last_name,
-            'is_subscribed': True,
-            'recipes': list(recipes_data),
-            'recipes_count': int(recipes_count),
-            'avatar': avatar_url,
-        }
+        return data
