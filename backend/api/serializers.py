@@ -254,36 +254,39 @@ class FoodgramUserCreateSerializer(UserCreateSerializer):
 
 
 class SubscriptionSerializer(FoodgramUserSerializer):
-    """Сериализатор для отображения подписок на авторов."""
-    
-    # Объявляем новые поля, которых нет в обычном профиле пользователя
+    """Сериализатор для отображения и валидации подписок."""
+
     recipes = serializers.SerializerMethodField()
     recipes_count = serializers.SerializerMethodField()
 
     class Meta(FoodgramUserSerializer.Meta):
-        # Расширяем поля родительского FoodgramUserSerializer,
-        # чтобы автоматически подтянулись id, username, email, avatar, is_subscribed
         fields = FoodgramUserSerializer.Meta.fields + ('recipes', 'recipes_count')
         read_only_fields = fields
 
+    def validate(self, data):
+        user = self.context.get('request').user
+        author = self.context.get('author')
+
+        if user == author:
+            raise serializers.ValidationError('Нельзя подписаться на самого себя!')
+        if user.follower.filter(author=author).exists():
+            raise serializers.ValidationError('Вы уже подписаны на этого автора!')
+        return data
+
     def get_recipes_count(self, obj):
-        # obj — это объект User (автор), так как мы наследуемся от сериализатора пользователя.
-        # len() не делает SQL-запрос при настроенном prefetch_related
         return len(obj.recipes.all())
 
     def get_recipes(self, obj):
         request = self.context.get('request')
         recipes_queryset = obj.recipes.all()
-        
-        # Обрабатываем лимит рецептов из query parameters
+
         recipes_limit = request.query_params.get('recipes_limit') if request else None
         if recipes_limit and recipes_limit.isdigit():
             recipes_queryset = recipes_queryset[:int(recipes_limit)]
-            
+
         serializer = RecipeShortSerializer(
             recipes_queryset,
             many=True,
             context=self.context
         )
         return serializer.data
-

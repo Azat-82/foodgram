@@ -9,7 +9,7 @@
 * **Панель администратора (Django Admin):** http://51.250.44.45/admin/
 
 ### Данные суперпользователя (is_superuser=True) для проверки:
-* **Логин (Email):** azat.tk.82@mail.ru
+* **Логин (Email):** admin@foodgram.ru
 * **Пароль:** Dlffood9+
 
 ---

@@ -212,19 +212,18 @@ class FoodgramUserViewSet(UserViewSet):
 
         if request.method == 'POST':
             serializer = SubscriptionSerializer(
-                data={'user': user.id, 'author': author.id},
-                context={'request': request}
+                author,
+                data=request.data,
+                context={'request': request, 'author': author}
             )
             serializer.is_valid(raise_exception=True)
-            serializer.save()
+
+            Subscription.objects.create(user=user, author=author)
+
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         if request.method == 'DELETE':
             deleted_count, _ = user.follower.filter(author=author).delete()
             if deleted_count == 0:
-                # Нет тела запроса.
-                raise serializers.ValidationError(
-                    'Вы не были подписаны на этого автора!'
-                )
-
+                raise serializers.ValidationError('Вы не были подписаны на этого автора!')
             return Response(status=status.HTTP_204_NO_CONTENT)
