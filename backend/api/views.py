@@ -185,23 +185,31 @@ class FoodgramUserViewSet(UserViewSet):
     def subscriptions(self, request):
         user = request.user
 
-        queryset = (
-            user.follower
-            .select_related('author')
-            .prefetch_related('author__recipes')
-        )
+        queryset = get_user_model().objects.filter(
+            following__user=user
+        ).prefetch_related('recipes')
 
-        page = self.paginate_queryset(queryset)
+        paginator = self.pagination_class() if self.pagination_class else LimitPageNumberPagination()
+
+        page = paginator.paginate_queryset(queryset, request, view=self)
         if page is not None:
             serializer = SubscriptionSerializer(
                 page, many=True, context={'request': request}
             )
-            return self.get_paginated_response(serializer.data)
+            return paginator.get_paginated_response(serializer.data)
 
         serializer = SubscriptionSerializer(
             queryset, many=True, context={'request': request}
         )
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(
+            {
+                'count': queryset.count(),
+                'next': None,
+                'previous': None,
+                'results': serializer.data
+            },
+            status=status.HTTP_200_OK
+        )
 
     @action(
         detail=True,
