@@ -189,8 +189,11 @@ class FoodgramUserViewSet(UserViewSet):
             following__user=user
         ).prefetch_related('recipes')
 
-        paginator = self.pagination_class() if self.pagination_class else LimitPageNumberPagination()
-
+        paginator = (
+            self.pagination_class()
+            if self.pagination_class
+            else LimitPageNumberPagination()
+        )
         page = paginator.paginate_queryset(queryset, request, view=self)
         if page is not None:
             serializer = SubscriptionSerializer(
@@ -234,5 +237,7 @@ class FoodgramUserViewSet(UserViewSet):
         if request.method == 'DELETE':
             deleted_count, _ = user.follower.filter(author=author).delete()
             if deleted_count == 0:
-                raise serializers.ValidationError('Вы не были подписаны на этого автора!')
+                raise serializers.ValidationError(
+                    'Вы не были подписаны на этого автора!'
+                )
             return Response(status=status.HTTP_204_NO_CONTENT)

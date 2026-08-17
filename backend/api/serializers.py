@@ -6,7 +6,6 @@ from rest_framework import serializers
 from recipes.models import (
     Tag, Ingredient, Recipe, RecipeIngredient, Favorite, ShoppingCart
 )
-from users.models import Subscription
 from .fields import Base64ImageField
 
 User = get_user_model()
@@ -260,7 +259,10 @@ class SubscriptionSerializer(FoodgramUserSerializer):
     recipes_count = serializers.SerializerMethodField()
 
     class Meta(FoodgramUserSerializer.Meta):
-        fields = FoodgramUserSerializer.Meta.fields + ('recipes', 'recipes_count')
+        fields = FoodgramUserSerializer.Meta.fields + (
+            'recipes',
+            'recipes_count',
+        )
         read_only_fields = fields
 
     def get_recipes_count(self, obj):
@@ -270,7 +272,10 @@ class SubscriptionSerializer(FoodgramUserSerializer):
         request = self.context.get('request')
         recipes_queryset = obj.recipes.all()
 
-        recipes_limit = request.query_params.get('recipes_limit') if request else None
+        recipes_limit = (
+            request.query_params.get('recipes_limit')
+            if request else None
+        )
         if recipes_limit and recipes_limit.isdigit():
             recipes_queryset = recipes_queryset[:int(recipes_limit)]
 
