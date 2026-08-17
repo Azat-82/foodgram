@@ -185,9 +185,11 @@ class FoodgramUserViewSet(UserViewSet):
     def subscriptions(self, request):
         user = request.user
 
-        queryset = get_user_model().objects.filter(
-            following__user=user
-        ).prefetch_related('recipes')
+        queryset = (
+            user.follower
+            .select_related('author')
+            .prefetch_related('author__recipes')
+        )
 
         page = self.paginate_queryset(queryset)
         if page is not None:
@@ -212,13 +214,12 @@ class FoodgramUserViewSet(UserViewSet):
 
         if request.method == 'POST':
             serializer = SubscriptionSerializer(
-                author,
-                data=request.data,
-                context={'request': request, 'author': author}
+                data={'user': request.user.id, 'author': author.id},
+                context={'request': request}
             )
             serializer.is_valid(raise_exception=True)
 
-            Subscription.objects.create(user=user, author=author)
+            serializer.save()
 
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
