@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.db.models import Count, Sum
 from django.http import HttpResponse
+from django.shortcuts import redirect
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
 from rest_framework import status, viewsets, serializers
@@ -166,8 +167,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
     )
     def get_link(self, request, pk=None):
         recipe = self.get_object()
-        short_link = request.build_absolute_uri(f'/recipes/{recipe.id}/')
-        return Response({'short-link': short_link}, status=status.HTTP_200_OK)
+        short_link = request.build_absolute_uri(f'/s/{recipe.id}/')
+        return Response(
+            {'short-link': short_link},
+            status=status.HTTP_200_OK
+        )
 
 
 class FoodgramUserViewSet(UserViewSet):
@@ -225,15 +229,23 @@ class FoodgramUserViewSet(UserViewSet):
         author = self.get_object()
 
         if request.method == 'POST':
+            # Передаем data={}, чтобы сериализатор запустил валидацию контекста
             serializer = SubscriptionSerializer(
-                author,
-                data=request.data,
+                data={},
                 context={'request': request, 'author': author}
             )
             serializer.is_valid(raise_exception=True)
 
             Subscription.objects.create(user=user, author=author)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+            response_serializer = SubscriptionSerializer(
+                author,
+                context={'request': request}
+            )
+            return Response(
+                response_serializer.data,
+                status=status.HTTP_201_CREATED
+            )
 
         if request.method == 'DELETE':
             deleted_count, _ = user.follower.filter(author=author).delete()
@@ -242,3 +254,7 @@ class FoodgramUserViewSet(UserViewSet):
                     'Вы не были подписаны на этого автора!'
                 )
             return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+def short_link_redirect(request, pk):
+    return redirect(f'/recipes/{pk}/')
