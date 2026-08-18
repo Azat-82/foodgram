@@ -16,7 +16,7 @@ User = get_user_model()
 class AvatarSerializer(serializers.ModelSerializer):
     """Сериализатор для обновления аватара пользователя."""
 
-    avatar = serializers.Base64ImageField(required=True)
+    avatar = Base64ImageField(required=True)
 
     class Meta:
         model = get_user_model()
