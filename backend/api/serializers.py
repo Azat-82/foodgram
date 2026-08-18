@@ -203,11 +203,12 @@ class FavoriteSerializer(serializers.ModelSerializer):
         fields = ('user', 'recipe')
 
     def validate(self, data):
-        user = data['user']
-        recipe = data['recipe']
+        user = data.get('user')
+        recipe = data.get('recipe')
+
         if user.favorites.filter(recipe=recipe).exists():
             raise serializers.ValidationError(
-                'Рецепт уже добавлен в избранное.'
+                'Рецепт уже добавлен в избранное!'
             )
         return data
 
@@ -267,22 +268,28 @@ class SubscriptionSerializer(FoodgramUserSerializer):
     class Meta:
         model = User
         fields = (
-            'email',
-            'id',
-            'username',
-            'first_name',
-            'last_name',
-            'is_subscribed',
-            'avatar',
-            'recipes',
-            'recipes_count',
+            'email', 'id', 'username', 'first_name', 'last_name',
+            'is_subscribed', 'avatar', 'recipes', 'recipes_count',
         )
         read_only_fields = fields
+
+    def validate(self, data):
+        user = self.context.get('request').user
+        author = self.context.get('author')
+
+        if user == author:
+            raise serializers.ValidationError(
+                'Нельзя подписаться на самого себя!'
+            )
+        if user.follower.filter(author=author).exists():
+            raise serializers.ValidationError(
+                'Вы уже подписаны на этого автора!'
+            )
+        return data
 
     def get_recipes(self, obj):
         request = self.context.get('request')
         recipes_queryset = obj.recipes.all()
-
         recipes_limit = (
             request.query_params.get('recipes_limit')
             if request else None
@@ -290,9 +297,6 @@ class SubscriptionSerializer(FoodgramUserSerializer):
         if recipes_limit and recipes_limit.isdigit():
             recipes_queryset = recipes_queryset[:int(recipes_limit)]
 
-        serializer = RecipeShortSerializer(
-            recipes_queryset,
-            many=True,
-            context=self.context
-        )
-        return serializer.data
+        return RecipeShortSerializer(
+            recipes_queryset, many=True, context=self.context
+        ).data

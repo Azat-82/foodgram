@@ -118,15 +118,18 @@ class RecipeViewSet(viewsets.ModelViewSet):
             )
             serializer.is_valid(raise_exception=True)
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(
+                serializer.data,
+                status=status.HTTP_201_CREATED
+            )
 
         if request.method == 'DELETE':
-            deleted_count, _ = user.favorites.filter(recipe=recipe).delete()
-            if deleted_count == 0:
+            favorite_record = user.favorites.filter(recipe=recipe).first()
+            if not favorite_record:
                 raise serializers.ValidationError(
                     'Рецепта не было в избранном!'
                 )
-
+            favorite_record.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
@@ -239,32 +242,28 @@ class FoodgramUserViewSet(DjoserUserViewSet):
         author = self.get_object()
 
         if request.method == 'POST':
-            if user == author:
-                raise serializers.ValidationError(
-                    'Нельзя подписаться на самого себя!'
-                )
-            if user.follower.filter(author=author).exists():
-                raise serializers.ValidationError(
-                    'Вы уже подписаны на этого автора!'
-                )
-
+            serializer = SubscriptionSerializer(
+                data={},
+                context={'request': request, 'author': author}
+            )
+            serializer.is_valid(raise_exception=True)
             Subscription.objects.create(user=user, author=author)
 
-            serializer = SubscriptionSerializer(
-                author,
-                context={'request': request}
+            response_serializer = SubscriptionSerializer(
+                author, context={'request': request}
             )
             return Response(
-                serializer.data,
+                response_serializer.data,
                 status=status.HTTP_201_CREATED
             )
 
         if request.method == 'DELETE':
-            deleted_count, _ = user.follower.filter(author=author).delete()
-            if deleted_count == 0:
+            subscription = user.follower.filter(author=author).first()
+            if not subscription:
                 raise serializers.ValidationError(
                     'Вы не были подписаны на этого автора!'
                 )
+            subscription.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
