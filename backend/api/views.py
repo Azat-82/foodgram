@@ -44,14 +44,24 @@ class TagViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
-    """Вьюсет для просмотра ингредиентов с поиском по названию."""
+    """Вьюсет для просмотра ингредиентов с фильтрацией по имени."""
 
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
-    permission_classes = (IsAuthenticatedOrReadOnly,)
+    permission_classes = (AllowAny,)
     pagination_class = None
-    filter_backends = (IngredientSearchFilter,)
-    search_fields = ('^name',)
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        name = self.request.query_params.get('name')
+
+        if name:
+            name = name.strip().lower()
+            queryset = queryset.filter(
+                name__icontains=name
+            ).distinct()
+
+        return queryset
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
@@ -242,18 +252,23 @@ class FoodgramUserViewSet(DjoserUserViewSet):
         author = self.get_object()
 
         if request.method == 'POST':
-            serializer = SubscriptionSerializer(
-                data={},
-                context={'request': request, 'author': author}
-            )
-            serializer.is_valid(raise_exception=True)
+            if user == author:
+                raise serializers.ValidationError(
+                    'Нельзя подписаться на самого себя!'
+                )
+            if user.follower.filter(author=author).exists():
+                raise serializers.ValidationError(
+                    'Вы уже подписаны на этого автора!'
+                )
+
             Subscription.objects.create(user=user, author=author)
 
-            response_serializer = SubscriptionSerializer(
-                author, context={'request': request}
+            serializer = SubscriptionSerializer(
+                author, 
+                context={'request': request}
             )
             return Response(
-                response_serializer.data,
+                serializer.data,
                 status=status.HTTP_201_CREATED
             )
 
