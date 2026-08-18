@@ -57,9 +57,7 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
 
         if name:
             name = name.strip().lower()
-            queryset = queryset.filter(
-                name__icontains=name
-            ).distinct()
+            queryset = queryset.filter(name__istartswith=name).distinct()
 
         return queryset
 
@@ -264,7 +262,7 @@ class FoodgramUserViewSet(DjoserUserViewSet):
             Subscription.objects.create(user=user, author=author)
 
             serializer = SubscriptionSerializer(
-                author, 
+                author,
                 context={'request': request}
             )
             return Response(
@@ -291,24 +289,17 @@ class FoodgramUserViewSet(DjoserUserViewSet):
         user = request.user
 
         if request.method == 'PUT':
-            serializer = AvatarSerializer(
-                user,
-                data=request.data
-            )
+            serializer = AvatarSerializer(user, data=request.data)
             serializer.is_valid(raise_exception=True)
             serializer.save()
+
+            avatar_url = request.build_absolute_uri(user.avatar.url)
             return Response(
-                serializer.data,
+                {'avatar': avatar_url},
                 status=status.HTTP_200_OK
             )
 
         if request.method == 'DELETE':
             if user.avatar:
                 user.avatar.delete(save=True)
-            return Response(
-                status=status.HTTP_204_NO_CONTENT
-            )
-
-
-def short_link_redirect(request, pk):
-    return redirect(f'/recipes/{pk}/')
+            return Response(status=status.HTTP_204_NO_CONTENT)
