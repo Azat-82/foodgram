@@ -262,37 +262,49 @@ class FoodgramUserCreateSerializer(UserCreateSerializer):
         }
 
 
-class SubscriptionSerializer(FoodgramUserSerializer):
+class SubscriptionSerializer(serializers.ModelSerializer):
     """Сериализатор для отображения подписок."""
 
+    email = serializers.ReadOnlyField(source='author.email')
+    id = serializers.ReadOnlyField(source='author.id')
+    username = serializers.ReadOnlyField(source='author.username')
+    first_name = serializers.ReadOnlyField(source='author.first_name')
+    last_name = serializers.ReadOnlyField(source='author.last_name')
+    is_subscribed = serializers.SerializerMethodField()
     recipes = serializers.SerializerMethodField()
     recipes_count = serializers.ReadOnlyField()
+    avatar = serializers.SerializerMethodField()
 
-    class Meta(FoodgramUserSerializer.Meta):
-        fields = FoodgramUserSerializer.Meta.fields + (
+    class Meta:
+        model = Subscription
+        fields = (
+            'email',
+            'id',
+            'username',
+            'first_name',
+            'last_name',
+            'is_subscribed',
             'recipes',
             'recipes_count',
+            'avatar',
         )
-        read_only_fields = fields
 
-    def validate(self, data):
-        user = self.context.get('request').user
-        author = self.context.get('author')
+    def get_is_subscribed(self, obj):
+        return True
 
-        if user == author:
-            raise serializers.ValidationError(
-                'Нельзя подписаться на самого себя!'
+    def get_avatar(self, obj):
+        request = self.context.get('request')
+        author = obj.author
+        if hasattr(author, 'avatar') and author.avatar:
+            return (
+                request.build_absolute_uri(author.avatar.url)
+                if request else author.avatar.url
             )
-        if user.follower.filter(author=author).exists():
-            raise serializers.ValidationError(
-                'Вы уже подписаны на этого автора!'
-            )
-        return data
+        return None
 
     def get_recipes(self, obj):
         request = self.context.get('request')
-        recipes_queryset = obj.recipes.all()
-
+        recipes_queryset = obj.author.recipes.all()
         recipes_limit = (
             request.query_params.get('recipes_limit')
             if request else None

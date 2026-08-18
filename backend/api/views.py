@@ -195,10 +195,10 @@ class FoodgramUserViewSet(UserViewSet):
         user = request.user
 
         queryset = (
-            get_user_model()
-            .objects.filter(following__user=user)
-            .annotate(recipes_count=Count('recipes'))
-            .prefetch_related('recipes')
+            user.follower
+            .select_related('author')
+            .annotate(recipes_count=Count('author__recipes'))
+            .prefetch_related('author__recipes')
         )
 
         paginator = (
