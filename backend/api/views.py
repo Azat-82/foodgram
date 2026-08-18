@@ -3,7 +3,7 @@ from django.db.models import Count, Sum
 from django.http import HttpResponse
 from django.shortcuts import redirect
 from django_filters.rest_framework import DjangoFilterBackend
-from djoser.views import UserViewSet
+from djoser.views import UserViewSet as DjoserUserViewSet
 from rest_framework import status, viewsets, serializers
 from rest_framework.decorators import action
 from rest_framework.permissions import (
@@ -174,7 +174,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         )
 
 
-class FoodgramUserViewSet(UserViewSet):
+class FoodgramUserViewSet(DjoserUserViewSet):
     """Вьюсет для работы с пользователями, подписками и аватарами."""
 
     lookup_url_kwarg = 'id'
