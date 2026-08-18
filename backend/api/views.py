@@ -229,21 +229,23 @@ class FoodgramUserViewSet(UserViewSet):
         author = self.get_object()
 
         if request.method == 'POST':
-            # Передаем data={}, чтобы сериализатор запустил валидацию контекста
-            serializer = SubscriptionSerializer(
-                data={},
-                context={'request': request, 'author': author}
-            )
-            serializer.is_valid(raise_exception=True)
+            if user == author:
+                raise serializers.ValidationError(
+                    'Нельзя подписаться на самого себя!'
+                )
+            if user.follower.filter(author=author).exists():
+                raise serializers.ValidationError(
+                    'Вы уже подписаны на этого автора!'
+                )
 
             Subscription.objects.create(user=user, author=author)
 
-            response_serializer = SubscriptionSerializer(
+            serializer = SubscriptionSerializer(
                 author,
                 context={'request': request}
             )
             return Response(
-                response_serializer.data,
+                serializer.data,
                 status=status.HTTP_201_CREATED
             )
 
