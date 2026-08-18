@@ -2,8 +2,8 @@ from django.contrib.auth import get_user_model
 from django.db.models import Count, Sum
 from django.http import HttpResponse
 from django.shortcuts import redirect
+from django.utils.module_loading import import_string
 from django_filters.rest_framework import DjangoFilterBackend
-from djoser.views import UserViewSet as DjoserUserViewSet
 from rest_framework import status, viewsets, serializers
 from rest_framework.decorators import action
 from rest_framework.permissions import (
@@ -30,6 +30,8 @@ from recipes.models import (
 from .pagination import LimitPageNumberPagination
 
 User = get_user_model()
+
+DjoserUserViewSet = import_string('djoser.views.UserViewSet')
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
