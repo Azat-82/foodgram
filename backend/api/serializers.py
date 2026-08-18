@@ -258,15 +258,18 @@ class SubscriptionSerializer(FoodgramUserSerializer):
     recipes = serializers.SerializerMethodField()
     recipes_count = serializers.SerializerMethodField()
 
+class SubscriptionSerializer(FoodgramUserSerializer):
+    """Сериализатор для отображения подписок."""
+
+    recipes = serializers.SerializerMethodField()
+    recipes_count = serializers.ReadOnlyField()
+
     class Meta(FoodgramUserSerializer.Meta):
         fields = FoodgramUserSerializer.Meta.fields + (
             'recipes',
             'recipes_count',
         )
         read_only_fields = fields
-
-    def get_recipes_count(self, obj):
-        return len(obj.recipes.all())
 
     def get_recipes(self, obj):
         request = self.context.get('request')

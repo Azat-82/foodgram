@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from django.db.models import Sum
+from django.db.models import Count, Sum
 from django.http import HttpResponse
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
@@ -185,15 +185,19 @@ class FoodgramUserViewSet(UserViewSet):
     def subscriptions(self, request):
         user = request.user
 
-        queryset = get_user_model().objects.filter(
-            following__user=user
-        ).prefetch_related('recipes')
+        queryset = (
+            get_user_model()
+            .objects.filter(following__user=user)
+            .annotate(recipes_count=Count('recipes'))
+            .prefetch_related('recipes')
+        )
 
         paginator = (
             self.pagination_class()
             if self.pagination_class
             else LimitPageNumberPagination()
         )
+
         page = paginator.paginate_queryset(queryset, request, view=self)
         if page is not None:
             serializer = SubscriptionSerializer(
