@@ -7,7 +7,7 @@ from djoser.views import UserViewSet
 from rest_framework import status, viewsets, serializers
 from rest_framework.decorators import action
 from rest_framework.permissions import (
-    IsAuthenticated, IsAuthenticatedOrReadOnly,  AllowAny
+    IsAuthenticated, IsAuthenticatedOrReadOnly, AllowAny
 )
 from rest_framework.response import Response
 
@@ -195,10 +195,10 @@ class FoodgramUserViewSet(UserViewSet):
         user = request.user
 
         queryset = (
-            user.follower
-            .select_related('author')
-            .annotate(recipes_count=Count('author__recipes'))
-            .prefetch_related('author__recipes')
+            get_user_model()
+            .objects.filter(following__user=user)
+            .annotate(recipes_count=Count('recipes'))
+            .prefetch_related('recipes')
         )
 
         paginator = (

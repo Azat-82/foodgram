@@ -4,8 +4,10 @@ from djoser.serializers import UserCreateSerializer, UserSerializer
 from rest_framework import serializers
 
 from recipes.models import (
-    Tag, Ingredient, Recipe, RecipeIngredient, Favorite, ShoppingCart
+    Tag, Ingredient, Recipe, RecipeIngredient,
+    Favorite, ShoppingCart
 )
+from users.models import Subscription
 from .fields import Base64ImageField
 
 User = get_user_model()
@@ -30,20 +32,14 @@ class RecipeShortSerializer(serializers.ModelSerializer):
 
 
 class FoodgramUserSerializer(UserSerializer):
+    """Основной сериализатор для пользователей (Djoser)."""
+
     is_subscribed = serializers.SerializerMethodField()
     avatar = serializers.ImageField(required=False, allow_null=True)
 
-    class Meta:
+    class Meta(UserSerializer.Meta):
         model = User
-        fields = (
-            'email',
-            'id',
-            'username',
-            'first_name',
-            'last_name',
-            'is_subscribed',
-            'avatar',
-        )
+        fields = UserSerializer.Meta.fields + ('is_subscribed', 'avatar')
 
     def get_is_subscribed(self, obj):
         request = self.context.get('request')
@@ -262,49 +258,23 @@ class FoodgramUserCreateSerializer(UserCreateSerializer):
         }
 
 
-class SubscriptionSerializer(serializers.ModelSerializer):
-    """Сериализатор для отображения подписок."""
+class SubscriptionSerializer(FoodgramUserSerializer):
+    """Сериализатор подписок, унаследованный от FoodgramUserSerializer."""
 
-    email = serializers.ReadOnlyField(source='author.email')
-    id = serializers.ReadOnlyField(source='author.id')
-    username = serializers.ReadOnlyField(source='author.username')
-    first_name = serializers.ReadOnlyField(source='author.first_name')
-    last_name = serializers.ReadOnlyField(source='author.last_name')
-    is_subscribed = serializers.SerializerMethodField()
     recipes = serializers.SerializerMethodField()
     recipes_count = serializers.ReadOnlyField()
-    avatar = serializers.SerializerMethodField()
 
-    class Meta:
-        model = Subscription
-        fields = (
-            'email',
-            'id',
-            'username',
-            'first_name',
-            'last_name',
-            'is_subscribed',
+    class Meta(FoodgramUserSerializer.Meta):
+        fields = FoodgramUserSerializer.Meta.fields + (
             'recipes',
             'recipes_count',
-            'avatar',
         )
-
-    def get_is_subscribed(self, obj):
-        return True
-
-    def get_avatar(self, obj):
-        request = self.context.get('request')
-        author = obj.author
-        if hasattr(author, 'avatar') and author.avatar:
-            return (
-                request.build_absolute_uri(author.avatar.url)
-                if request else author.avatar.url
-            )
-        return None
+        read_only_fields = fields
 
     def get_recipes(self, obj):
         request = self.context.get('request')
-        recipes_queryset = obj.author.recipes.all()
+        recipes_queryset = obj.recipes.all()
+
         recipes_limit = (
             request.query_params.get('recipes_limit')
             if request else None
