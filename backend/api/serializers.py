@@ -256,12 +256,6 @@ class SubscriptionSerializer(FoodgramUserSerializer):
     """Сериализатор для отображения подписок."""
 
     recipes = serializers.SerializerMethodField()
-    recipes_count = serializers.SerializerMethodField()
-
-class SubscriptionSerializer(FoodgramUserSerializer):
-    """Сериализатор для отображения подписок."""
-
-    recipes = serializers.SerializerMethodField()
     recipes_count = serializers.ReadOnlyField()
 
     class Meta(FoodgramUserSerializer.Meta):
@@ -270,6 +264,20 @@ class SubscriptionSerializer(FoodgramUserSerializer):
             'recipes_count',
         )
         read_only_fields = fields
+
+    def validate(self, data):
+        user = self.context.get('request').user
+        author = self.context.get('author')
+
+        if user == author:
+            raise serializers.ValidationError(
+                'Нельзя подписаться на самого себя!'
+            )
+        if user.follower.filter(author=author).exists():
+            raise serializers.ValidationError(
+                'Вы уже подписаны на этого автора!'
+            )
+        return data
 
     def get_recipes(self, obj):
         request = self.context.get('request')

@@ -128,7 +128,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     @action(
         detail=False,
-        methods=['get'],
         permission_classes=(IsAuthenticated,),
     )
     def download_shopping_cart(self, request):
@@ -163,7 +162,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     @action(
         detail=True,
-        methods=('get',),
         url_path='get-link',
     )
     def get_link(self, request, pk=None):
@@ -179,7 +177,6 @@ class FoodgramUserViewSet(UserViewSet):
 
     @action(
         detail=False,
-        methods=('get',),
         permission_classes=(IsAuthenticated,),
     )
     def subscriptions(self, request):
@@ -229,13 +226,13 @@ class FoodgramUserViewSet(UserViewSet):
 
         if request.method == 'POST':
             serializer = SubscriptionSerializer(
-                data={'user': request.user.id, 'author': author.id},
-                context={'request': request}
+                author,
+                data=request.data,
+                context={'request': request, 'author': author}
             )
             serializer.is_valid(raise_exception=True)
 
-            serializer.save()
-
+            Subscription.objects.create(user=user, author=author)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         if request.method == 'DELETE':
