@@ -11,6 +11,16 @@ from .fields import Base64ImageField
 User = get_user_model()
 
 
+class AvatarSerializer(serializers.ModelSerializer):
+    """Сериализатор для обновления аватара пользователя."""
+
+    avatar = serializers.Base64ImageField(required=True)
+
+    class Meta:
+        model = get_user_model()
+        fields = ('avatar',)
+
+
 class RecipeShortSerializer(serializers.ModelSerializer):
     """Облегченный сериализатор рецепта для подписок и списков."""
 

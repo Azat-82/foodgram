@@ -7,7 +7,7 @@ from djoser.views import UserViewSet
 from rest_framework import status, viewsets, serializers
 from rest_framework.decorators import action
 from rest_framework.permissions import (
-    IsAuthenticated, IsAuthenticatedOrReadOnly
+    IsAuthenticated, IsAuthenticatedOrReadOnly,  AllowAny
 )
 from rest_framework.response import Response
 
@@ -179,6 +179,14 @@ class FoodgramUserViewSet(UserViewSet):
 
     lookup_url_kwarg = 'id'
 
+    def get_queryset(self):
+        return get_user_model().objects.all()
+
+    def get_permissions(self):
+        if self.action == 'retrieve':
+            return (AllowAny(),)
+        return super().get_permissions()
+
     @action(
         detail=False,
         permission_classes=(IsAuthenticated,),
@@ -224,7 +232,7 @@ class FoodgramUserViewSet(UserViewSet):
         methods=('post', 'delete'),
         permission_classes=(IsAuthenticated,),
     )
-    def subscribe(self, request, id=None):
+    def subscribe(self, request, pk=None):
         user = request.user
         author = self.get_object()
 
@@ -256,6 +264,34 @@ class FoodgramUserViewSet(UserViewSet):
                     'Вы не были подписаны на этого автора!'
                 )
             return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(
+        detail=False,
+        methods=('put', 'delete'),
+        permission_classes=(IsAuthenticated,),
+        url_path='me/avatar',
+    )
+    def avatar(self, request):
+        user = request.user
+
+        if request.method == 'PUT':
+            serializer = AvatarSerializer(
+                user,
+                data=request.data
+            )
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(
+                serializer.data,
+                status=status.HTTP_200_OK
+            )
+
+        if request.method == 'DELETE':
+            if user.avatar:
+                user.avatar.delete(save=True)
+            return Response(
+                status=status.HTTP_204_NO_CONTENT
+            )
 
 
 def short_link_redirect(request, pk):
