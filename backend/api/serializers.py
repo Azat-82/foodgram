@@ -13,14 +13,33 @@ from .fields import Base64ImageField
 User = get_user_model()
 
 
+import base64
+from django.core.files.base import ContentFile
+
+
 class AvatarSerializer(serializers.ModelSerializer):
     """Сериализатор для обновления аватара пользователя."""
 
-    avatar = Base64ImageField(required=True)
+    avatar = serializers.CharField(required=True)
 
     class Meta:
         model = User
         fields = ('avatar',)
+
+    def validate_avatar(self, value):
+        if isinstance(value, str) and value.startswith('data:image'):
+            format, imgstr = value.split(';base64,')
+            ext = format.split('/')[-1]
+
+            data = ContentFile(
+                base64.b64decode(imgstr),
+                name=f'{self.context["request"].user.username}_avatar.{ext}'
+            )
+            return data
+
+        raise serializers.ValidationError(
+            'Неверный формат изображения! Ожидалась строка Base64.'
+        )
 
 
 class RecipeShortSerializer(serializers.ModelSerializer):
