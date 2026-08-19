@@ -1,4 +1,7 @@
+import base64
+
 from django.contrib.auth import get_user_model
+from django.core.files.base import ContentFile
 from django.db.models import Count, Sum, Min
 from django.http import HttpResponse
 from django.shortcuts import redirect
@@ -296,21 +299,39 @@ class FoodgramUserViewSet(DjoserUserViewSet):
         user = request.user
 
         if request.method == 'PUT':
-            serializer = AvatarSerializer(
-                user,
-                data=request.data,
-                context={'request': request}
-            )
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return Response(
-                serializer.data,
-                status=status.HTTP_200_OK
-            )
+            avatar_data = request.data.get('avatar')
+            
+            if not avatar_data:
+                raise serializers.ValidationError(
+                    {'avatar': 'Это поле обязательно.'}
+                )
+
+            try:
+                if (isinstance(avatar_data, str) 
+                        and avatar_data.startswith('data:image')):
+                    format, imgstr = avatar_data.split(';base64,')
+                    ext = format.split('/')[-1]
+                    
+                    file_name = f'{user.username}_avatar.{ext}'
+                    data = ContentFile(
+                        base64.b64decode(imgstr), 
+                        name=file_name
+                    )
+                    
+                    user.avatar.save(file_name, data, save=True)
+                    
+                    return Response(
+                        {'avatar': request.build_absolute_uri(user.avatar.url)},
+                        status=status.HTTP_200_OK
+                    )
+            except Exception as e:
+                raise serializers.ValidationError(
+                    f'Ошибка при обработке изображения: {str(e)}'
+                )
+
+            raise serializers.ValidationError('Неверный формат Base64.')
 
         if request.method == 'DELETE':
             if user.avatar:
                 user.avatar.delete(save=True)
-            return Response(
-                status=status.HTTP_204_NO_CONTENT
-            )
+            return Response(status=status.HTTP_204_NO_CONTENT)
