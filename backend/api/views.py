@@ -290,48 +290,50 @@ class FoodgramUserViewSet(DjoserUserViewSet):
             return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
-        detail=False,
-        methods=('put', 'delete'),
+        detail=True,
+        methods=('post', 'delete'),
         permission_classes=(IsAuthenticated,),
-        url_path='me/avatar',
     )
-    def avatar(self, request):
+    def subscribe(self, request, pk=None):
         user = request.user
+        author = self.get_object()
 
-        if request.method == 'PUT':
-            avatar_data = request.data.get('avatar')
-            
-            if not avatar_data:
+        if request.method == 'POST':
+            if user == author:
                 raise serializers.ValidationError(
-                    {'avatar': 'Это поле обязательно.'}
+                    'Нельзя подписаться на самого себя!'
                 )
 
             try:
-                if (isinstance(avatar_data, str) 
-                        and avatar_data.startswith('data:image')):
-                    format, imgstr = avatar_data.split(';base64,')
-                    ext = format.split('/')[-1]
-                    
-                    file_name = f'{user.username}_avatar.{ext}'
-                    data = ContentFile(
-                        base64.b64decode(imgstr), 
-                        name=file_name
+
+                if Subscription.objects.filter(user=user, author=author).exists():
+                    raise serializers.ValidationError(
+                        'Вы уже подписаны на этого автора!'
                     )
-                    
-                    user.avatar.save(file_name, data, save=True)
-                    
-                    return Response(
-                        {'avatar': request.build_absolute_uri(user.avatar.url)},
-                        status=status.HTTP_200_OK
-                    )
-            except Exception as e:
+
+                Subscription.objects.create(user=user, author=author)
+
+            except Exception as database_error:
                 raise serializers.ValidationError(
-                    f'Ошибка при обработке изображения: {str(e)}'
+                    f'Ошибка базы данных при подписке: {str(database_error)}'
                 )
 
-            raise serializers.ValidationError('Неверный формат Base64.')
+            serializer = SubscriptionSerializer(
+                author, 
+                context={'request': request}
+            )
+            return Response(
+                serializer.data,
+                status=status.HTTP_201_CREATED
+            )
 
         if request.method == 'DELETE':
-            if user.avatar:
-                user.avatar.delete(save=True)
+            subscription = Subscription.objects.filter(
+                user=user, author=author
+            ).first()
+            if not subscription:
+                raise serializers.ValidationError(
+                    'Вы не были подписаны на этого автора!'
+                )
+            subscription.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
