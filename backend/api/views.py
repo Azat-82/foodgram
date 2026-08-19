@@ -296,17 +296,21 @@ class FoodgramUserViewSet(DjoserUserViewSet):
         user = request.user
 
         if request.method == 'PUT':
-            serializer = AvatarSerializer(user, data=request.data)
+            serializer = AvatarSerializer(
+                user,
+                data=request.data,
+                context={'request': request}
+            )
             serializer.is_valid(raise_exception=True)
             serializer.save()
-
-            avatar_url = request.build_absolute_uri(user.avatar.url)
             return Response(
-                {'avatar': avatar_url},
+                serializer.data,
                 status=status.HTTP_200_OK
             )
 
         if request.method == 'DELETE':
             if user.avatar:
                 user.avatar.delete(save=True)
-            return Response(status=status.HTTP_204_NO_CONTENT)
+            return Response(
+                status=status.HTTP_204_NO_CONTENT
+            )

@@ -19,7 +19,7 @@ class AvatarSerializer(serializers.ModelSerializer):
     avatar = Base64ImageField(required=True)
 
     class Meta:
-        model = get_user_model()
+        model = User
         fields = ('avatar',)
 
 
@@ -274,17 +274,6 @@ class SubscriptionSerializer(FoodgramUserSerializer):
         read_only_fields = fields
 
     def validate(self, data):
-        user = self.context.get('request').user
-        author = self.context.get('author')
-
-        if user == author:
-            raise serializers.ValidationError(
-                'Нельзя подписаться на самого себя!'
-            )
-        if user.follower.filter(author=author).exists():
-            raise serializers.ValidationError(
-                'Вы уже подписаны на этого автора!'
-            )
         return data
 
     def get_recipes(self, obj):
