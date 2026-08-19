@@ -286,7 +286,6 @@ class SubscriptionSerializer(FoodgramUserSerializer):
 
     recipes = serializers.SerializerMethodField()
     recipes_count = serializers.ReadOnlyField()
-    is_subscribed = serializers.SerializerMethodField()
 
     class Meta:
         model = User
