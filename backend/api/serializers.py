@@ -1,4 +1,7 @@
+import base64
+
 from django.contrib.auth import get_user_model
+from django.core.files.base import ContentFile
 from django.core.validators import MinValueValidator
 from djoser.serializers import UserCreateSerializer, UserSerializer
 from rest_framework import serializers
@@ -283,6 +286,7 @@ class SubscriptionSerializer(FoodgramUserSerializer):
 
     recipes = serializers.SerializerMethodField()
     recipes_count = serializers.ReadOnlyField()
+    is_subscribed = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -292,8 +296,8 @@ class SubscriptionSerializer(FoodgramUserSerializer):
         )
         read_only_fields = fields
 
-    def validate(self, data):
-        return data
+    def get_is_subscribed(self, obj):
+        return True
 
     def get_recipes(self, obj):
         request = self.context.get('request')
