@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from django.db.models import Count, Sum
+from django.db.models import Count, Sum, Min
 from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.utils.module_loading import import_string
@@ -44,7 +44,7 @@ class TagViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
-    """Вьюсет для просмотра ингредиентов с фильтрацией по имени."""
+    """Вьюсет для просмотра ингредиентов."""
 
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
@@ -52,14 +52,21 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     pagination_class = None
 
     def get_queryset(self):
-        queryset = super().get_queryset()
         name = self.request.query_params.get('name')
 
-        if name:
-            name = name.strip().lower()
-            queryset = queryset.filter(name__istartswith=name).distinct()
+        if not name:
+            return Ingredient.objects.all()
 
-        return queryset
+        name = name.strip().lower()
+
+        unique_names = (
+            Ingredient.objects.filter(name__icontains=name)
+            .values('name')
+            .annotate(first_id=Min('id'))
+            .values_list('first_id', flat=True)
+        )
+
+        return Ingredient.objects.filter(id__in=unique_names)
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
