@@ -216,10 +216,15 @@ class FoodgramUserViewSet(DjoserUserViewSet):
     )
     def subscriptions(self, request):
         user = request.user
+        from users.models import Subscription
+
+        author_ids = Subscription.objects.filter(user=user).values_list(
+            'author_id', flat=True
+        )
 
         queryset = (
             get_user_model()
-            .objects.filter(following__user=user)
+            .objects.filter(id__in=author_ids)
             .annotate(recipes_count=Count('recipes'))
             .prefetch_related('recipes')
         )
@@ -251,42 +256,49 @@ class FoodgramUserViewSet(DjoserUserViewSet):
         )
 
     @action(
-        detail=True,
-        methods=('post', 'delete'),
+        detail=False,
+        methods=('put', 'delete'),
         permission_classes=(IsAuthenticated,),
+        url_path='me/avatar',
     )
-    def subscribe(self, request, pk=None):
+    def avatar(self, request):
         user = request.user
-        author = self.get_object()
 
-        if request.method == 'POST':
-            if user == author:
-                raise serializers.ValidationError(
-                    'Нельзя подписаться на самого себя!'
-                )
-            if user.follower.filter(author=author).exists():
-                raise serializers.ValidationError(
-                    'Вы уже подписаны на этого автора!'
+        if request.method == 'PUT':
+            avatar_data = request.data.get('avatar')
+            if not avatar_data:
+                return Response(
+                    {'errors': 'Поле avatar обязательно для заполнения.'},
+                    status=status.HTTP_400_BAD_REQUEST
                 )
 
-            Subscription.objects.create(user=user, author=author)
+            try:
+                if (isinstance(avatar_data, str) 
+                        and avatar_data.startswith('data:image')):
+                    format, imgstr = avatar_data.split(';base64,')
+                    ext = format.split('/')[-1]
+                    file_name = f'{user.username}_avatar.{ext}'
+                    data = ContentFile(base64.b64decode(imgstr), name=file_name)
 
-            serializer = SubscriptionSerializer(
-                author,
-                context={'request': request}
-            )
+                    user.avatar.save(file_name, data, save=True)
+
+                    return Response(
+                        {'avatar': request.build_absolute_uri(user.avatar.url)},
+                        status=status.HTTP_200_OK
+                    )
+            except Exception as e:
+                return Response(
+                    {'errors': f'Ошибка сохранения картинки: {str(e)}'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
             return Response(
-                serializer.data,
-                status=status.HTTP_201_CREATED
+                {'errors': 'Неверный формат строки base64.'},
+                status=status.HTTP_400_BAD_REQUEST
             )
 
         if request.method == 'DELETE':
-            subscription = user.follower.filter(author=author).first()
-            if not subscription:
-                raise serializers.ValidationError(
-                    'Вы не были подписаны на этого автора!'
-                )
-            subscription.delete()
+            if user.avatar:
+                user.avatar.delete(save=True)
             return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
@@ -296,43 +308,43 @@ class FoodgramUserViewSet(DjoserUserViewSet):
     )
     def subscribe(self, request, pk=None):
         user = request.user
-        
+
         try:
             author = User.objects.get(pk=pk)
         except User.DoesNotExist:
-            raise serializers.ValidationError(
-                {'errors': 'Пользователь с таким ID не найден.'}
+            return Response(
+                {'errors': 'Пользователь не найден.'},
+                status=status.HTTP_404_NOT_FOUND
             )
+
+        from users.models import Subscription
 
         if request.method == 'POST':
             if user == author:
-                raise serializers.ValidationError(
-                    {'errors': 'Нельзя подписаться на самого себя!'}
+                return Response(
+                    {'errors': 'Нельзя подписаться на самого себя!'},
+                    status=status.HTTP_400_BAD_REQUEST
                 )
-            
             if Subscription.objects.filter(user=user, author=author).exists():
-                raise serializers.ValidationError(
-                    {'errors': 'Вы уже подписаны на этого автора!'}
+                return Response(
+                    {'errors': 'Вы уже подписаны на этого автора!'},
+                    status=status.HTTP_400_BAD_REQUEST
                 )
-            
+
             Subscription.objects.create(user=user, author=author)
-            
             serializer = SubscriptionSerializer(
-                author, 
-                context={'request': request}
+                author, context={'request': request}
             )
-            return Response(
-                serializer.data,
-                status=status.HTTP_201_CREATED
-            )
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         if request.method == 'DELETE':
             subscription = Subscription.objects.filter(
                 user=user, author=author
             ).first()
             if not subscription:
-                raise serializers.ValidationError(
-                    {'errors': 'Вы не подписаны на этого автора!'}
+                return Response(
+                    {'errors': 'Вы не подписаны на этого автора!'},
+                    status=status.HTTP_400_BAD_REQUEST
                 )
             subscription.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
