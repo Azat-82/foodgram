@@ -10,14 +10,9 @@ from recipes.models import (
     Tag, Ingredient, Recipe, RecipeIngredient,
     Favorite, ShoppingCart
 )
-from users.models import Subscription
 from .fields import Base64ImageField
 
 User = get_user_model()
-
-
-import base64
-from django.core.files.base import ContentFile
 
 
 class AvatarSerializer(serializers.ModelSerializer):
@@ -315,4 +310,3 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         return RecipeShortSerializer(
             recipes_queryset, many=True, context=self.context
         ).data
-

@@ -4,7 +4,6 @@ from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
 from django.db.models import Count, Sum, Min
 from django.http import HttpResponse
-from django.shortcuts import redirect
 from django.utils.module_loading import import_string
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status, viewsets, serializers
@@ -14,7 +13,7 @@ from rest_framework.permissions import (
 )
 from rest_framework.response import Response
 
-from api.filters import IngredientSearchFilter, RecipeFilter
+from api.filters import RecipeFilter
 from api.serializers import (
     FavoriteSerializer,
     IngredientSerializer,
@@ -273,17 +272,22 @@ class FoodgramUserViewSet(DjoserUserViewSet):
                 )
 
             try:
-                if (isinstance(avatar_data, str) 
+                if (isinstance(avatar_data, str)
                         and avatar_data.startswith('data:image')):
                     format, imgstr = avatar_data.split(';base64,')
                     ext = format.split('/')[-1]
                     file_name = f'{user.username}_avatar.{ext}'
-                    data = ContentFile(base64.b64decode(imgstr), name=file_name)
-
+                    data = ContentFile(
+                        base64.b64decode(imgstr),
+                        name=file_name
+                    )
                     user.avatar.save(file_name, data, save=True)
 
+                    avatar_url = request.build_absolute_uri(
+                        user.avatar.url
+                    )
                     return Response(
-                        {'avatar': request.build_absolute_uri(user.avatar.url)},
+                        {'avatar': avatar_url},
                         status=status.HTTP_200_OK
                     )
             except Exception as e:
