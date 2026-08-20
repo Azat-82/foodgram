@@ -305,6 +305,7 @@ class FoodgramUserViewSet(DjoserUserViewSet):
         detail=True,
         methods=('post', 'delete'),
         permission_classes=(IsAuthenticated,),
+        url_path='subscribe',
     )
     def subscribe(self, request, pk=None):
         user = request.user
