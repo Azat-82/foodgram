@@ -281,11 +281,12 @@ class FoodgramUserCreateSerializer(UserCreateSerializer):
         }
 
 
-class SubscriptionSerializer(FoodgramUserSerializer):
-    """Сериализатор подписок, унаследованный от FoodgramUserSerializer."""
+class SubscriptionSerializer(serializers.ModelSerializer):
+    """Абсолютно независимый сериализатор для подписок."""
 
     recipes = serializers.SerializerMethodField()
-    recipes_count = serializers.ReadOnlyField()
+    recipes_count = serializers.SerializerMethodField()
+    is_subscribed = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -297,6 +298,9 @@ class SubscriptionSerializer(FoodgramUserSerializer):
 
     def get_is_subscribed(self, obj):
         return True
+
+    def get_recipes_count(self, obj):
+        return obj.recipes.count()
 
     def get_recipes(self, obj):
         request = self.context.get('request')
@@ -311,3 +315,4 @@ class SubscriptionSerializer(FoodgramUserSerializer):
         return RecipeShortSerializer(
             recipes_queryset, many=True, context=self.context
         ).data
+
