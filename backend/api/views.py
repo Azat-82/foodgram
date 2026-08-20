@@ -296,28 +296,27 @@ class FoodgramUserViewSet(DjoserUserViewSet):
     )
     def subscribe(self, request, pk=None):
         user = request.user
-        author = self.get_object()
+        
+        try:
+            author = User.objects.get(pk=pk)
+        except User.DoesNotExist:
+            raise serializers.ValidationError(
+                {'errors': 'Пользователь с таким ID не найден.'}
+            )
 
         if request.method == 'POST':
             if user == author:
                 raise serializers.ValidationError(
-                    'Нельзя подписаться на самого себя!'
+                    {'errors': 'Нельзя подписаться на самого себя!'}
                 )
-
-            try:
-
-                if Subscription.objects.filter(user=user, author=author).exists():
-                    raise serializers.ValidationError(
-                        'Вы уже подписаны на этого автора!'
-                    )
-
-                Subscription.objects.create(user=user, author=author)
-
-            except Exception as database_error:
+            
+            if Subscription.objects.filter(user=user, author=author).exists():
                 raise serializers.ValidationError(
-                    f'Ошибка базы данных при подписке: {str(database_error)}'
+                    {'errors': 'Вы уже подписаны на этого автора!'}
                 )
-
+            
+            Subscription.objects.create(user=user, author=author)
+            
             serializer = SubscriptionSerializer(
                 author, 
                 context={'request': request}
@@ -333,7 +332,7 @@ class FoodgramUserViewSet(DjoserUserViewSet):
             ).first()
             if not subscription:
                 raise serializers.ValidationError(
-                    'Вы не были подписаны на этого автора!'
+                    {'errors': 'Вы не подписаны на этого автора!'}
                 )
             subscription.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
