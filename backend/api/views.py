@@ -307,11 +307,11 @@ class FoodgramUserViewSet(DjoserUserViewSet):
         permission_classes=(IsAuthenticated,),
         url_path='subscribe',
     )
-    def subscribe(self, request, pk=None):
+    def subscribe(self, request, id=None):
         user = request.user
 
         try:
-            author = User.objects.get(pk=pk)
+            author = User.objects.get(id=id)  # Ищем по id
         except User.DoesNotExist:
             return Response(
                 {'errors': 'Пользователь не найден.'},
