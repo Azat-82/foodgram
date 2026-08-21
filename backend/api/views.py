@@ -41,17 +41,8 @@ class TagViewSet(viewsets.ReadOnlyModelViewSet):
 
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
-    permission_classes = (IsAuthenticatedOrReadOnly,)
+    permission_classes = (AllowAny,)  # Меняем на AllowAny, чтобы гости тоже видели теги
     pagination_class = None
-
-
-    def get_queryset(self):
-        name = self.request.query_params.get('name')
-        if not name:
-            return Ingredient.objects.all()
-
-        name = name.strip().lower()
-        return Ingredient.objects.filter(name__icontains=name)
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
