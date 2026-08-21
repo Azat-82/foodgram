@@ -336,3 +336,19 @@ class FoodgramUserViewSet(DjoserUserViewSet):
                 )
             subscription.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
+    """Вьюсет для просмотра ингредиентов."""
+
+    serializer_class = IngredientSerializer
+    permission_classes = (AllowAny,)
+    pagination_class = None
+
+    def get_queryset(self):
+        name = self.request.query_params.get('name')
+        if not name:
+            return Ingredient.objects.all()
+
+        name = name.strip().lower()
+        return Ingredient.objects.filter(name__icontains=name)
