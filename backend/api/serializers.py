@@ -25,19 +25,23 @@ class AvatarSerializer(serializers.ModelSerializer):
         fields = ('avatar',)
 
     def validate_avatar(self, value):
-        if isinstance(value, str) and value.startswith('data:image'):
-            format, imgstr = value.split(';base64,')
-            ext = format.split('/')[-1]
-
-            data = ContentFile(
-                base64.b64decode(imgstr),
-                name=f'{self.context["request"].user.username}_avatar.{ext}'
+        if not (isinstance(value, str) and value.startswith('data:image')):
+            raise serializers.ValidationError(
+                'Неверный формат изображения! Ожидалась строка Base64.'
             )
-            return data
+        return value
 
-        raise serializers.ValidationError(
-            'Неверный формат изображения! Ожидалась строка Base64.'
-        )
+    def update(self, instance, validated_data):
+        avatar_base64 = validated_data.get('avatar')
+
+        format, imgstr = avatar_base64.split(';base64,')
+        ext = format.split('/')[-1]
+        file_name = f'{instance.username}_avatar.{ext}'
+
+        data = ContentFile(base64.b64decode(imgstr), name=file_name)
+
+        instance.avatar.save(file_name, data, save=True)
+        return instance
 
 
 class RecipeShortSerializer(serializers.ModelSerializer):
