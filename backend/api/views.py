@@ -45,30 +45,13 @@ class TagViewSet(viewsets.ReadOnlyModelViewSet):
     pagination_class = None
 
 
-class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
-    """Вьюсет для просмотра ингредиентов."""
-
-    queryset = Ingredient.objects.all()
-    serializer_class = IngredientSerializer
-    permission_classes = (AllowAny,)
-    pagination_class = None
-
     def get_queryset(self):
         name = self.request.query_params.get('name')
-
         if not name:
             return Ingredient.objects.all()
 
         name = name.strip().lower()
-
-        unique_names = (
-            Ingredient.objects.filter(name__icontains=name)
-            .values('name')
-            .annotate(first_id=Min('id'))
-            .values_list('first_id', flat=True)
-        )
-
-        return Ingredient.objects.filter(id__in=unique_names)
+        return Ingredient.objects.filter(name__icontains=name)
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
