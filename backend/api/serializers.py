@@ -62,7 +62,15 @@ class FoodgramUserSerializer(UserSerializer):
         request = self.context.get('request')
         if not request or request.user.is_anonymous:
             return False
-        return request.user.follower.filter(author=obj).exists()
+
+        # Импортируем модель локально, защищаясь от циклического импорта
+        from users.models import Subscription
+
+        return Subscription.objects.filter(
+            user=request.user,
+            author=obj
+        ).exists()
+
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -70,7 +78,7 @@ class TagSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Tag
-        fields = ('id', 'name', 'slug')
+        fields = ('id', 'name', 'color', 'slug')
 
 
 class IngredientSerializer(serializers.ModelSerializer):
