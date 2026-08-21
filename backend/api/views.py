@@ -110,12 +110,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
             )
 
         if request.method == 'POST':
-            if user.favorites.filter(recipe=recipe).exists():
-                return Response(
-                    {'errors': 'Рецепт уже в избранном.'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-
             serializer = FavoriteSerializer(
                 data={'user': user.id, 'recipe': recipe.id},
                 context={'request': request}
@@ -129,7 +123,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
             if not favorite_record:
                 return Response(
                     {'errors': 'Рецепта не было в избранном.'},
-                    status=status.HTTP_400_BAD_REQUEST
+                    status=status.HTTP_404_NOT_FOUND
                 )
             favorite_record.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)

@@ -221,7 +221,7 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
 
 
 class FavoriteSerializer(serializers.ModelSerializer):
-    """Сериализатор для добавления рецептов в избранное."""
+    """Сериализатор для добавления рецептов в избранное с полной валидацией."""
 
     class Meta:
         model = Favorite
@@ -230,11 +230,14 @@ class FavoriteSerializer(serializers.ModelSerializer):
     def validate(self, data):
         user = data.get('user')
         recipe = data.get('recipe')
+        request = self.context.get('request')
 
-        if user.favorites.filter(recipe=recipe).exists():
-            raise serializers.ValidationError(
-                'Рецепт уже добавлен в избранное!'
-            )
+        if request and request.method == 'POST':
+            if user.favorites.filter(recipe=recipe).exists():
+                raise serializers.ValidationError(
+                    'Этот рецепт уже добавлен в избранное!'
+                )
+
         return data
 
     def to_representation(self, instance):
