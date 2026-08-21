@@ -276,26 +276,21 @@ class FoodgramUserCreateSerializer(UserCreateSerializer):
         }
 
 
-class SubscriptionSerializer(serializers.ModelSerializer):
-    """Абсолютно независимый сериализатор для подписок."""
+class SubscriptionSerializer(FoodgramUserSerializer):
+    """Сериализатор для подписок, расширяющий базовый профиль."""
 
     recipes = serializers.SerializerMethodField()
     recipes_count = serializers.SerializerMethodField()
-    is_subscribed = serializers.SerializerMethodField()
 
-    class Meta:
-        model = User
-        fields = (
-            'email', 'id', 'username', 'first_name', 'last_name',
-            'is_subscribed', 'avatar', 'recipes', 'recipes_count',
+    class Meta(FoodgramUserSerializer.Meta):
+        fields = FoodgramUserSerializer.Meta.fields + (
+            'recipes',
+            'recipes_count',
         )
         read_only_fields = fields
 
-    def get_is_subscribed(self, obj):
-        return True
-
     def get_recipes_count(self, obj):
-        return obj.recipes.count()
+        return getattr(obj, 'recipes_count', obj.recipes.count())
 
     def get_recipes(self, obj):
         request = self.context.get('request')
