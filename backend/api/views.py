@@ -1,8 +1,5 @@
-import base64
-
 from django.contrib.auth import get_user_model
-from django.core.files.base import ContentFile
-from django.db.models import Count, Sum, Min
+from django.db.models import Count, Sum
 from django.http import HttpResponse
 from django.urls import reverse
 from django.utils.module_loading import import_string
@@ -18,11 +15,13 @@ from rest_framework.response import Response
 
 from api.filters import RecipeFilter
 from api.serializers import (
+    AvatarSerializer,
     FavoriteSerializer,
     IngredientSerializer,
     RecipeReadSerializer,
     RecipeWriteSerializer,
     ShoppingCartSerializer,
+    SubscribeSerializer,
     SubscriptionSerializer,
     TagSerializer,
 )

@@ -17,9 +17,10 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 
+from api.views import short_link_redirect
+
 
 def short_redirect_view(request, pk):
-    from api.views import short_link_redirect
     return short_link_redirect(request, pk)
 
 

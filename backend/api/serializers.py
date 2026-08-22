@@ -67,14 +67,12 @@ class FoodgramUserSerializer(UserSerializer):
         if not request or request.user.is_anonymous:
             return False
 
-        # Импортируем модель локально, защищаясь от циклического импорта
         from users.models import Subscription
 
         return Subscription.objects.filter(
             user=request.user,
             author=obj
         ).exists()
-
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -319,4 +317,36 @@ class SubscriptionSerializer(FoodgramUserSerializer):
 
         return RecipeShortSerializer(
             recipes_queryset, many=True, context=self.context
+        ).data
+
+
+class SubscribeSerializer(serializers.ModelSerializer):
+    """Сериализатор для создания подписки с полной валидацией."""
+
+    class Meta:
+        from users.models import Subscription
+        model = Subscription
+        fields = ('user', 'author')
+
+    def validate(self, data):
+        user = data.get('user')
+        author = data.get('author')
+
+        if user == author:
+            raise serializers.ValidationError(
+                'Нельзя подписаться на самого себя!'
+            )
+
+        from users.models import Subscription
+        if Subscription.objects.filter(user=user, author=author).exists():
+            raise serializers.ValidationError(
+                'Вы уже подписаны на этого автора!'
+            )
+
+        return data
+
+    def to_representation(self, instance):
+        return SubscriptionSerializer(
+            instance.author,
+            context=self.context
         ).data
