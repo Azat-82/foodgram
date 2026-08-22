@@ -4,10 +4,13 @@ from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
 from django.db.models import Count, Sum, Min
 from django.http import HttpResponse
+from django.urls import reverse
 from django.utils.module_loading import import_string
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status, viewsets, serializers
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
+from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import (
     IsAuthenticated, IsAuthenticatedOrReadOnly, AllowAny
 )
@@ -29,6 +32,8 @@ from recipes.models import (
     RecipeIngredient,
     Tag,
 )
+from users.models import Subscription
+
 from .pagination import LimitPageNumberPagination
 
 User = get_user_model()
@@ -41,7 +46,7 @@ class TagViewSet(viewsets.ReadOnlyModelViewSet):
 
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
-    permission_classes = (AllowAny,)  # Меняем на AllowAny, чтобы гости тоже видели теги
+    permission_classes = (AllowAny,)
     pagination_class = None
 
 
@@ -167,12 +172,12 @@ class RecipeViewSet(viewsets.ModelViewSet):
         url_path='get-link',
     )
     def get_link(self, request, pk=None):
-        recipe = self.get_object()
-        short_link = request.build_absolute_uri(f'/s/{recipe.id}/')
-        return Response(
-            {'short-link': short_link},
-            status=status.HTTP_200_OK
-        )
+        recipe = get_object_or_404(Recipe, pk=pk)
+
+        short_path = reverse('short_link', kwargs={'pk': recipe.id})
+        short_link = request.build_absolute_uri(short_path)
+
+        return Response({'short-link': short_link}, status=status.HTTP_200_OK)
 
 
 class FoodgramUserViewSet(DjoserUserViewSet):
@@ -194,7 +199,6 @@ class FoodgramUserViewSet(DjoserUserViewSet):
     )
     def subscriptions(self, request):
         user = request.user
-        from users.models import Subscription
 
         author_ids = Subscription.objects.filter(user=user).values_list(
             'author_id', flat=True
@@ -243,45 +247,23 @@ class FoodgramUserViewSet(DjoserUserViewSet):
         user = request.user
 
         if request.method == 'PUT':
-            avatar_data = request.data.get('avatar')
-            if not avatar_data:
-                return Response(
-                    {'errors': 'Поле avatar обязательно для заполнения.'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-
-            try:
-                if (isinstance(avatar_data, str)
-                        and avatar_data.startswith('data:image')):
-                    format, imgstr = avatar_data.split(';base64,')
-                    ext = format.split('/')[-1]
-                    file_name = f'{user.username}_avatar.{ext}'
-                    data = ContentFile(
-                        base64.b64decode(imgstr),
-                        name=file_name
-                    )
-                    user.avatar.save(file_name, data, save=True)
-
-                    avatar_url = request.build_absolute_uri(
-                        user.avatar.url
-                    )
-                    return Response(
-                        {'avatar': avatar_url},
-                        status=status.HTTP_200_OK
-                    )
-            except Exception as e:
-                return Response(
-                    {'errors': f'Ошибка сохранения картинки: {str(e)}'},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                )
-            return Response(
-                {'errors': 'Неверный формат строки base64.'},
-                status=status.HTTP_400_BAD_REQUEST
+            serializer = AvatarSerializer(
+                user,
+                data=request.data,
+                context={'request': request}
             )
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            avatar_url = request.build_absolute_uri(user.avatar.url)
+            return Response({'avatar': avatar_url}, status=status.HTTP_200_OK)
 
         if request.method == 'DELETE':
-            if user.avatar:
-                user.avatar.delete(save=True)
+            if not user.avatar:
+                error = ValidationError({'errors': 'Аватар не найден.'})
+                error.status_code = status.HTTP_404_NOT_FOUND
+                raise error
+
+            user.avatar.delete(save=True)
             return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
@@ -293,32 +275,15 @@ class FoodgramUserViewSet(DjoserUserViewSet):
     def subscribe(self, request, id=None):
         user = request.user
 
-        try:
-            author = User.objects.get(id=id)  # Ищем по id
-        except User.DoesNotExist:
-            return Response(
-                {'errors': 'Пользователь не найден.'},
-                status=status.HTTP_404_NOT_FOUND
-            )
-
-        from users.models import Subscription
+        author = get_object_or_404(User, id=id)
 
         if request.method == 'POST':
-            if user == author:
-                return Response(
-                    {'errors': 'Нельзя подписаться на самого себя!'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            if Subscription.objects.filter(user=user, author=author).exists():
-                return Response(
-                    {'errors': 'Вы уже подписаны на этого автора!'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-
-            Subscription.objects.create(user=user, author=author)
-            serializer = SubscriptionSerializer(
-                author, context={'request': request}
+            serializer = SubscribeSerializer(
+                data={'user': user.id, 'author': author.id},
+                context={'request': request}
             )
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         if request.method == 'DELETE':
@@ -326,10 +291,12 @@ class FoodgramUserViewSet(DjoserUserViewSet):
                 user=user, author=author
             ).first()
             if not subscription:
-                return Response(
-                    {'errors': 'Вы не подписаны на этого автора!'},
-                    status=status.HTTP_400_BAD_REQUEST
+                error = ValidationError(
+                    {'errors': 'Вы не подписаны на этого автора.'}
                 )
+                error.status_code = status.HTTP_404_NOT_FOUND
+                raise error
+
             subscription.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
 
