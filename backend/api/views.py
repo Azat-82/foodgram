@@ -1,11 +1,12 @@
 from django.contrib.auth import get_user_model
 from django.db.models import Count, Sum
 from django.http import HttpResponse
+from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils.module_loading import import_string
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status, viewsets, serializers
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import (
@@ -89,8 +90,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 user.shopping_carts.filter(recipe=recipe).delete()
             )
             if deleted_count == 0:
-                # Сериализатор не используется, так как нет
-                # входящих данных для валидации.
                 raise serializers.ValidationError(
                     'Рецепта не было в списке покупок!'
                 )
@@ -314,3 +313,12 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
 
         name = name.strip().lower()
         return Ingredient.objects.filter(name__icontains=name)
+
+
+@api_view(('GET',))
+@permission_classes((AllowAny,))
+def short_link_redirect(request, pk):
+    """Перенаправление по короткой ссылке на полную страницу рецепта."""
+    recipe = get_object_or_404(Recipe, pk=pk)
+
+    return redirect(f'/recipes/{recipe.id}/')
