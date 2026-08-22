@@ -175,8 +175,14 @@ class RecipeViewSet(viewsets.ModelViewSet):
         short_path = reverse('short_link', kwargs={'pk': recipe.id})
         short_link = request.build_absolute_uri(short_path)
 
-        return Response({'short-link': short_link}, status=status.HTTP_200_OK)
-
+        return Response(
+            {
+                'shortLink': short_link,
+                'short_link': short_link,
+                'short-link': short_link
+            },
+            status=status.HTTP_200_OK
+        )
 
 class FoodgramUserViewSet(DjoserUserViewSet):
     """Вьюсет для работы с пользователями, подписками и аватарами."""
