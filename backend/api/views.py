@@ -184,6 +184,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
             status=status.HTTP_200_OK
         )
 
+
 class FoodgramUserViewSet(DjoserUserViewSet):
     """Вьюсет для работы с пользователями, подписками и аватарами."""
 
@@ -324,7 +325,6 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
 @api_view(('GET',))
 @permission_classes((AllowAny,))
 def short_link_redirect(request, pk):
-    """Перенаправление по короткой ссылке на полную страницу рецепта."""
     recipe = get_object_or_404(Recipe, pk=pk)
 
     return redirect(f'/recipes/{recipe.id}/')
