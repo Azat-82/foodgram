@@ -11,7 +11,7 @@ User = get_user_model()
 class FoodgramUserAdmin(BaseUserAdmin):
     list_display = ('id', 'username', 'email', 'first_name', 'last_name')
 
-    search_fields = ('username', 'email')
+    search_fields = ('username__icontains', 'email__icontains')
 
     list_filter = ('email', 'username')
 
