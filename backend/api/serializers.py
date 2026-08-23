@@ -10,6 +10,7 @@ from recipes.models import (
     Tag, Ingredient, Recipe, RecipeIngredient,
     Favorite, ShoppingCart
 )
+from users.models import Subscription
 from .fields import Base64ImageField
 
 User = get_user_model()
@@ -254,7 +255,8 @@ class ShoppingCartSerializer(serializers.ModelSerializer):
         user = data.get('user')
         recipe = data.get('recipe')
 
-        if user and recipe and user.shopping_carts.filter(recipe=recipe).exists():
+        if (user and recipe
+                and user.shopping_carts.filter(recipe=recipe).exists()):
             raise serializers.ValidationError('Рецепт уже в списке покупок.')
         return data
 
