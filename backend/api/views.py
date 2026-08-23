@@ -86,13 +86,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         if request.method == 'DELETE':
-            deleted_count, _ = (
-                user.shopping_carts.filter(recipe=recipe).delete()
-            )
-            if deleted_count == 0:
-                raise serializers.ValidationError(
-                    'Рецепта не было в списке покупок!'
-                )
+            cart_item = get_object_or_404(user.shopping_carts, recipe=recipe)
+            cart_item.delete()
 
             return Response(status=status.HTTP_204_NO_CONTENT)
 

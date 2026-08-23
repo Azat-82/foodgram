@@ -67,12 +67,7 @@ class FoodgramUserSerializer(UserSerializer):
         if not request or request.user.is_anonymous:
             return False
 
-        from users.models import Subscription
-
-        return Subscription.objects.filter(
-            user=request.user,
-            author=obj
-        ).exists()
+        return request.user.follower.filter(author=obj).exists()
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -250,16 +245,16 @@ class FavoriteSerializer(serializers.ModelSerializer):
 
 
 class ShoppingCartSerializer(serializers.ModelSerializer):
-    """Сериализатор для добавления рецептов в список покупок."""
 
     class Meta:
         model = ShoppingCart
         fields = ('user', 'recipe')
 
     def validate(self, data):
-        user = data['user']
-        recipe = data['recipe']
-        if user.shopping_carts.filter(recipe=recipe).exists():
+        user = data.get('user')
+        recipe = data.get('recipe')
+
+        if user and recipe and user.shopping_carts.filter(recipe=recipe).exists():
             raise serializers.ValidationError('Рецепт уже в списке покупок.')
         return data
 
@@ -324,7 +319,6 @@ class SubscribeSerializer(serializers.ModelSerializer):
     """Сериализатор для создания подписки с полной валидацией."""
 
     class Meta:
-        from users.models import Subscription
         model = Subscription
         fields = ('user', 'author')
 
@@ -337,7 +331,6 @@ class SubscribeSerializer(serializers.ModelSerializer):
                 'Нельзя подписаться на самого себя!'
             )
 
-        from users.models import Subscription
         if Subscription.objects.filter(user=user, author=author).exists():
             raise serializers.ValidationError(
                 'Вы уже подписаны на этого автора!'
