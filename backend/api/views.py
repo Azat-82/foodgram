@@ -7,7 +7,7 @@ from django.utils.module_loading import import_string
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
-from rest_framework.exceptions import ValidationError, NotFound
+from rest_framework.exceptions import NotFound
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import (
     IsAuthenticated, IsAuthenticatedOrReadOnly, AllowAny
@@ -262,7 +262,6 @@ class FoodgramUserViewSet(DjoserUserViewSet):
     )
     def subscribe(self, request, id=None):
         user = request.user
-
         author = get_object_or_404(User, id=id)
 
         if request.method == 'POST':
@@ -275,17 +274,11 @@ class FoodgramUserViewSet(DjoserUserViewSet):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         if request.method == 'DELETE':
-            subscription = Subscription.objects.filter(
-                user=user, author=author
-            ).first()
-            if not subscription:
-                error = ValidationError(
-                    {'errors': 'Вы не подписаны на этого автора.'}
-                )
-                error.status_code = status.HTTP_404_NOT_FOUND
-                raise error
-
+            # 1. Запрос через related_name
+            # 2. Выносим проверку "за скобки"
+            subscription = get_object_or_404(user.follower, author=author)
             subscription.delete()
+
             return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -308,6 +301,7 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
 @api_view(('GET',))
 @permission_classes((AllowAny,))
 def short_link_redirect(request, pk):
+    """Перенаправление по короткой ссылке на страницу рецепта."""
     recipe = get_object_or_404(Recipe, pk=pk)
 
-    return redirect(f'/recipes/{recipe.id}/')
+    return redirect('//recipes/', pk=recipe.id)
