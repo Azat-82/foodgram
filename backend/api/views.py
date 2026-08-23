@@ -7,7 +7,7 @@ from django.utils.module_loading import import_string
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import ValidationError, NotFound
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import (
     IsAuthenticated, IsAuthenticatedOrReadOnly, AllowAny
@@ -74,7 +74,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     )
     def shopping_cart(self, request, pk=None):
         user = request.user
-        recipe = self.get_object()
+        recipe = get_object_or_404(Recipe, pk=pk)
 
         if request.method == 'POST':
             serializer = ShoppingCartSerializer(
@@ -86,9 +86,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         if request.method == 'DELETE':
-            cart_item = get_object_or_404(user.shopping_carts, recipe=recipe)
-            cart_item.delete()
+            cart_item = user.shopping_carts.filter(recipe=recipe).first()
+            if not cart_item:
+                raise NotFound('Рецепта не было в списке покупок.')
 
+            cart_item.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
@@ -98,14 +100,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     )
     def favorite(self, request, pk=None):
         user = request.user
-
-        try:
-            recipe = Recipe.objects.get(pk=pk)
-        except Recipe.DoesNotExist:
-            return Response(
-                {'errors': 'Рецепт не найден.'},
-                status=status.HTTP_404_NOT_FOUND
-            )
+        recipe = get_object_or_404(Recipe, pk=pk)
 
         if request.method == 'POST':
             serializer = FavoriteSerializer(
@@ -119,10 +114,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
         if request.method == 'DELETE':
             favorite_record = user.favorites.filter(recipe=recipe).first()
             if not favorite_record:
-                return Response(
-                    {'errors': 'Рецепта не было в избранном.'},
-                    status=status.HTTP_404_NOT_FOUND
-                )
+                # Вызываем исключение NotFound
+                raise NotFound('Рецепта не было в избранном.')
+
             favorite_record.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -165,7 +159,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
         url_path='get-link',
     )
     def get_link(self, request, pk=None):
-        recipe = get_object_or_404(Recipe, pk=pk)
+        # Используем встроенный метод DRF
+        recipe = self.get_object()
 
         short_path = reverse('short_link', kwargs={'pk': recipe.id})
         short_link = request.build_absolute_uri(short_path)
@@ -204,10 +199,12 @@ class FoodgramUserViewSet(DjoserUserViewSet):
             'author_id', flat=True
         )
 
+        # Добавляем .order_by('id')
         queryset = (
             get_user_model()
             .objects.filter(id__in=author_ids)
             .annotate(recipes_count=Count('recipes'))
+            .order_by('id')
             .prefetch_related('recipes')
         )
 
@@ -227,15 +224,7 @@ class FoodgramUserViewSet(DjoserUserViewSet):
         serializer = SubscriptionSerializer(
             queryset, many=True, context={'request': request}
         )
-        return Response(
-            {
-                'count': queryset.count(),
-                'next': None,
-                'previous': None,
-                'results': serializer.data
-            },
-            status=status.HTTP_200_OK
-        )
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     @action(
         detail=False,
@@ -259,9 +248,8 @@ class FoodgramUserViewSet(DjoserUserViewSet):
 
         if request.method == 'DELETE':
             if not user.avatar:
-                error = ValidationError({'errors': 'Аватар не найден.'})
-                error.status_code = status.HTTP_404_NOT_FOUND
-                raise error
+                # Используем NotFound
+                raise NotFound('Аватар не найден.')
 
             user.avatar.delete(save=True)
             return Response(status=status.HTTP_204_NO_CONTENT)
